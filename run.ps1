@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
     Offensive Security Gemini Proxy - Quick Start for AGY CLI (Windows)
@@ -70,7 +70,10 @@ param(
     [switch]$NoTools,
     [switch]$NoHistory,
     [switch]$NoContinuation,
-    [int]$MaxRetries = 3
+    [int]$MaxRetries = 3,
+
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$AgyArgs
 )
 
 $ErrorActionPreference = 'Continue'
@@ -128,6 +131,134 @@ function Write-BoxRow {
     Write-Host "$endPad│" -ForegroundColor $BorderColor
 }
 
+function Stop-ProcessTree {
+    param(
+        [int]$ProcessId,
+        [string]$ProcessName = ''
+    )
+    if ($ProcessId -le 0) { return }
+
+    # Prefer taskkill /T /F on Windows for clean, forceful tree termination
+    $taskkill = Get-Command taskkill.exe -ErrorAction SilentlyContinue
+    if ($taskkill) {
+        & $taskkill.Source /PID $ProcessId /T /F 2>&1 | Out-Null
+    } else {
+        try {
+            $children = Get-CimInstance Win32_Process -Filter "ParentProcessId = $ProcessId" -ErrorAction SilentlyContinue
+            foreach ($child in $children) {
+                Stop-ProcessTree -ProcessId $child.ProcessId -ProcessName $child.Name
+            }
+            Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+        } catch {}
+    }
+}
+
+function Test-PythonBinary {
+    param([string]$Path)
+    if (-not $Path -or -not (Test-Path $Path)) { return $false }
+    if ($Path -like '*\WindowsApps\*') {
+        $item = Get-Item $Path -ErrorAction SilentlyContinue
+        if (-not $item -or $item.Length -eq 0) { return $false }
+    }
+    try {
+        $ver = & $Path --version 2>&1
+        if ($LASTEXITCODE -eq 0 -and "$ver" -match 'Python 3\.') {
+            return $true
+        }
+    } catch {}
+    return $false
+}
+
+function Find-Python {
+    # 1. Existing PATH (skipping WindowsApps stubs)
+    $pyCandidates = @(
+        (Get-Command py -ErrorAction SilentlyContinue),
+        (Get-Command python -ErrorAction SilentlyContinue),
+        (Get-Command python3 -ErrorAction SilentlyContinue)
+    )
+    foreach ($cand in $pyCandidates) {
+        if ($cand -and (Test-PythonBinary $cand.Source)) {
+            $pyDir = Split-Path -Parent $cand.Source
+            $env:Path = "$pyDir;$pyDir\Scripts;$env:Path"
+            return $cand.Source
+        }
+    }
+
+    # 2. Windows py launcher
+    $pyLauncher = Get-Command py -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($pyLauncher) {
+        $pyPath = & $pyLauncher.Source -3 -c "import sys; print(sys.executable)" 2>$null
+        if ($pyPath -and (Test-PythonBinary $pyPath.Trim())) {
+            $pyDir = Split-Path -Parent $pyPath.Trim()
+            $env:Path = "$pyDir;$pyDir\Scripts;$env:Path"
+            return $pyPath.Trim()
+        }
+    }
+
+    # 3. Search common Windows installation paths
+    $searchPatterns = @(
+        "$env:LOCALAPPDATA\Programs\Python\Python*\python.exe",
+        "$env:LOCALAPPDATA\Python\*\python.exe",
+        "$env:LOCALAPPDATA\Python\pythoncore-*\python.exe",
+        "$env:ProgramFiles\Python*\python.exe",
+        "${env:ProgramFiles(x86)}\Python*\python.exe",
+        "$env:SystemDrive\Python*\python.exe",
+        "$env:USERPROFILE\.local\bin\python.exe"
+    )
+    foreach ($pattern in $searchPatterns) {
+        $found = Get-Item $pattern -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($found -and (Test-PythonBinary $found.FullName)) {
+            $pyDir = $found.DirectoryName
+            $env:Path = "$pyDir;$pyDir\Scripts;$env:Path"
+            return $found.FullName
+        }
+    }
+    return $null
+}
+
+function Find-MitmDump {
+    param([string]$PythonExe)
+
+    $cmd = Get-Command mitmdump -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+
+    # Query Python directly for its scripts path
+    if ($PythonExe -and (Test-Path $PythonExe)) {
+        try {
+            $pyScripts = & $PythonExe -c "import sysconfig; print(sysconfig.get_path('scripts'))" 2>$null
+            if ($pyScripts -and (Test-Path (Join-Path $pyScripts 'mitmdump.exe'))) {
+                $env:Path = "$pyScripts;$env:Path"
+                return (Join-Path $pyScripts 'mitmdump.exe')
+            }
+        } catch {}
+
+        $pyDir = Split-Path -Parent $PythonExe
+        $cand = Join-Path $pyDir 'Scripts\mitmdump.exe'
+        if (Test-Path $cand) {
+            $scriptsDir = Split-Path -Parent $cand
+            $env:Path = "$scriptsDir;$env:Path"
+            return $cand
+        }
+    }
+
+    # Search common Windows paths
+    $searchPaths = @(
+        "$env:LOCALAPPDATA\Python\*\Scripts\mitmdump.exe",
+        "$env:LOCALAPPDATA\Programs\Python\*\Scripts\mitmdump.exe",
+        "$env:APPDATA\Python\*\Scripts\mitmdump.exe",
+        "$env:LOCALAPPDATA\Python\bin\mitmdump.exe",
+        "$env:USERPROFILE\.local\bin\mitmdump.exe"
+    )
+    foreach ($pattern in $searchPaths) {
+        $found = Get-Item $pattern -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($found) {
+            $env:Path = "$($found.DirectoryName);$env:Path"
+            return $found.FullName
+        }
+    }
+    return $null
+}
+
 function Show-Banner {
     Write-Host ''
     Write-Host '  ╭───────────────────────────────────────────────────────────╮' -ForegroundColor Magenta
@@ -153,26 +284,49 @@ function Show-Banner {
 if ($Kill) {
     Write-Host ''
     Write-Host '  ╭─ PROCESS TERMINATION ─────────────────────────────────────╮' -ForegroundColor Magenta
-    Write-BoxLine '● Scanning for running proxy processes...' Cyan Magenta
+    Write-BoxLine '● Scanning for running proxy processes and port listeners...' Cyan Magenta
     
     $killed = 0
+    $pidsToKill = [System.Collections.Generic.HashSet[int]]::new()
+
+    # 1. Match proxy process signatures
     $procs = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
         Where-Object {
             ($_.Name -match '^(mitmdump|mitmweb|python|python3)\.exe$') -and
-            ($_.CommandLine -match 'gemini_rewriter|start_proxy')
+            ($_.CommandLine -match 'gemini_rewriter|start_proxy|mitmdump|mitmweb')
         }
-
     if ($procs) {
         foreach ($p in $procs) {
+            $null = $pidsToKill.Add($p.ProcessId)
+        }
+    }
+
+    # 2. Check listeners on proxy port and web port
+    $portsToCheck = @($Port)
+    if ($Web -or $WebPort) { $portsToCheck += $WebPort }
+    foreach ($chkPort in $portsToCheck) {
+        $conns = Get-NetTCPConnection -LocalPort $chkPort -State Listen -ErrorAction SilentlyContinue
+        if ($conns) {
+            foreach ($c in $conns) {
+                if ($c.OwningProcess -gt 4) {
+                    $null = $pidsToKill.Add($c.OwningProcess)
+                }
+            }
+        }
+    }
+
+    if ($pidsToKill.Count -gt 0) {
+        foreach ($pidToKill in $pidsToKill) {
             try {
-                Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue
-                Write-BoxLine "✔ Stopped $($p.Name) (PID: $($p.ProcessId))" Green Magenta
+                $pName = (Get-Process -Id $pidToKill -ErrorAction SilentlyContinue).ProcessName
+                Stop-ProcessTree -ProcessId $pidToKill -ProcessName $pName
+                Write-BoxLine "✔ Stopped $pName (PID: $pidToKill) + process tree" Green Magenta
                 $killed++
             } catch {}
         }
-        Write-BoxLine "✔ Cleanly terminated $killed process(es)." Green Magenta
+        Write-BoxLine "✔ Cleanly terminated $killed process tree(s)." Green Magenta
     } else {
-        Write-BoxLine '● No active proxy processes found.' DarkGray Magenta
+        Write-BoxLine '● No active proxy processes or port listeners found.' DarkGray Magenta
     }
     Write-Host '  ╰───────────────────────────────────────────────────────────╯' -ForegroundColor Magenta
     Write-Host ''
@@ -180,28 +334,37 @@ if ($Kill) {
 }
 
 # ==========================================================================
-# Detect Python runtime
+# Detect Python runtime & mitmdump
 # ==========================================================================
-$pythonCmd = Get-Command python, python3 -ErrorAction SilentlyContinue | Select-Object -First 1
-if (-not $pythonCmd) {
-    Write-Fail 'Python 3.10+ is required but not found in PATH.'
+$pythonExe = Find-Python
+if (-not $pythonExe) {
+    Write-Fail 'Python 3.10+ is required but not found in PATH or standard installation folders.'
+    Write-ItemLast 'Please install Python from python.org or ensure it is installed in AppData.'
     exit 1
 }
-$pythonExe = $pythonCmd.Source
+
+$mitmdumpExe = Find-MitmDump -PythonExe $pythonExe
 
 # ==========================================================================
 # Check & kill stale proxy on same port
 # ==========================================================================
 $portInUse = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
 if ($portInUse) {
-    Write-Warn "Port $Port is in use — clearing existing listener..."
+    Write-Warn "Port $Port is in use — clearing existing listener and child tree..."
     foreach ($conn in $portInUse) {
-        try {
-            Stop-Process -Id $conn.OwningProcess -Force -ErrorAction SilentlyContinue
-            Write-Ok "Terminated stale listener (PID: $($conn.OwningProcess))"
-        } catch {}
+        if ($conn.OwningProcess -gt 4) {
+            try {
+                $pName = (Get-Process -Id $conn.OwningProcess -ErrorAction SilentlyContinue).ProcessName
+                Stop-ProcessTree -ProcessId $conn.OwningProcess -ProcessName $pName
+                Write-Ok "Terminated stale listener $pName (PID: $($conn.OwningProcess))"
+            } catch {}
+        }
     }
-    Start-Sleep -Seconds 1
+    for ($i = 0; $i -lt 5; $i++) {
+        Start-Sleep -Milliseconds 400
+        $stillInUse = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
+        if (-not $stillInUse) { break }
+    }
 }
 
 # ==========================================================================
@@ -213,11 +376,14 @@ if (-not (Test-Path $CertDir)) {
 
 if (-not (Test-Path $Cert)) {
     Write-Info 'CA certificate missing — auto-generating...'
+    $mitmBin = if ($mitmdumpExe) { $mitmdumpExe } else { 'mitmdump' }
     try {
-        $proc = Start-Process -FilePath 'mitmdump' -ArgumentList '--listen-port','0','-q' -PassThru -WindowStyle Hidden
+        $proc = Start-Process -FilePath $mitmBin -ArgumentList '--listen-port','0','-q' -PassThru -WindowStyle Hidden
         Start-Sleep -Seconds 3
-        try { $proc | Stop-Process -Force -ErrorAction SilentlyContinue } catch {}
-    } catch {}
+        try { Stop-ProcessTree -ProcessId $proc.Id } catch {}
+    } catch {
+        Write-Warn "Ephemeral mitmdump execution error: $_"
+    }
     if (Test-Path $Cert) {
         Write-Ok "Generated CA certificate: $Cert"
     } else {
@@ -293,10 +459,22 @@ if ($WithAgy) {
 
     Write-Info "Starting background proxy on port $Port..."
     $proxyProc = Start-Process -FilePath $pythonExe -ArgumentList $pyArgs -PassThru -WindowStyle Hidden
-    Start-Sleep -Seconds 2
+    
+    # Wait for proxy port to enter Listen state
+    $isListening = $false
+    for ($i = 0; $i -lt 20; $i++) {
+        Start-Sleep -Milliseconds 500
+        if ($proxyProc.HasExited) { break }
+        $conn = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
+        if ($conn) {
+            $isListening = $true
+            break
+        }
+    }
 
-    if ($proxyProc.HasExited) {
-        Write-Fail "Proxy daemon failed to start. Verify port $Port is available."
+    if ($proxyProc.HasExited -or (-not $isListening)) {
+        Write-Fail "Proxy daemon failed to start or bind to port $Port."
+        try { Stop-ProcessTree -ProcessId $proxyProc.Id } catch {}
         exit 1
     }
 
@@ -316,11 +494,29 @@ if ($WithAgy) {
     Write-Host '  ╰───────────────────────────────────────────────────────────╯' -ForegroundColor Green
     Write-Host ''
 
-    try { & agy } catch {}
+    try {
+        if ($AgyArgs -and $AgyArgs.Count -gt 0) {
+            & agy @AgyArgs
+        } else {
+            & agy
+        }
+    } catch {
+        Write-Fail "Error invoking AGY CLI: $_"
+    }
 
     Write-Host ''
     Write-Warn 'AGY session terminated. Shutting down proxy daemon...'
-    try { $proxyProc | Stop-Process -Force -ErrorAction SilentlyContinue } catch {}
+    try { Stop-ProcessTree -ProcessId $proxyProc.Id } catch {}
+
+    # Clear any residual listener on port
+    $lingering = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
+    if ($lingering) {
+        foreach ($conn in $lingering) {
+            if ($conn.OwningProcess -gt 4) {
+                try { Stop-ProcessTree -ProcessId $conn.OwningProcess } catch {}
+            }
+        }
+    }
     Write-Ok 'Proxy stopped cleanly. Session ended.'
     Write-Host ''
 } else {

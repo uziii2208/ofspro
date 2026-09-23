@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
     Offensive Security Gemini Proxy - Windows Setup
@@ -87,72 +87,189 @@ Write-Host '  ╰─────────────────────
 # ==========================================================================
 # Step 1: mitmproxy
 # ==========================================================================
-Write-StepHeader 1 'MITMPROXY CORE ENGINE'
-
-function Find-MitmDump {
-    $cmd = Get-Command mitmdump -ErrorAction SilentlyContinue
-    if ($cmd) { return $cmd }
-
-    # Query Python directly for its scripts path
-    $pythonCmd = Get-Command python, python3 -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($pythonCmd) {
-        $pyScripts = & $pythonCmd.Source -c "import sysconfig; print(sysconfig.get_path('scripts'))" 2>$null
-        if ($pyScripts -and (Test-Path (Join-Path $pyScripts 'mitmdump.exe'))) {
-            $env:Path = "$pyScripts;$env:Path"
-            return (Get-Command mitmdump -ErrorAction SilentlyContinue)
-        }
+# ==========================================================================
+# Helpers: Python & mitmproxy Discovery Engine
+# ==========================================================================
+function Test-PythonBinary {
+    param([string]$Path)
+    if (-not $Path -or -not (Test-Path $Path)) { return $false }
+    if ($Path -like '*\WindowsApps\*') {
+        $item = Get-Item $Path -ErrorAction SilentlyContinue
+        if (-not $item -or $item.Length -eq 0) { return $false }
     }
-
-    # Search common Windows paths
-    $searchPaths = @(
-        "$env:LOCALAPPDATA\Python\*\Scripts",
-        "$env:LOCALAPPDATA\Programs\Python\*\Scripts",
-        "$env:APPDATA\Python\*\Scripts",
-        "$env:LOCALAPPDATA\Python\bin",
-        "$env:USERPROFILE\.local\bin"
-    )
-    foreach ($pattern in $searchPaths) {
-        $found = Get-Item (Join-Path $pattern 'mitmdump.exe') -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($found) {
-            $env:Path = "$($found.DirectoryName);$env:Path"
-            return (Get-Command mitmdump -ErrorAction SilentlyContinue)
+    try {
+        $ver = & $Path --version 2>&1
+        if ($LASTEXITCODE -eq 0 -and "$ver" -match 'Python 3\.') {
+            return $true
         }
-    }
-    return $null
+    } catch {}
+    return $false
 }
 
-$mitmdump = Find-MitmDump
-if ($mitmdump) {
-    $ver = & $mitmdump.Source --version 2>&1 | Select-Object -First 1
-    Write-Ok "Detected existing installation: $ver"
-    Write-ItemLast "Path: $($mitmdump.Source)"
-} else {
-    Write-Info 'mitmproxy not found in PATH — installing via pip...'
-    $pipCmd = Get-Command pip, pip3 -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($pipCmd) {
-        & $pipCmd.Source install mitmproxy 2>&1 | Out-Null
-    } else {
-        $python = Get-Command python, python3 -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($python) {
-            & $python.Source -m pip install mitmproxy 2>&1 | Out-Null
-        } else {
-            Write-Fail 'Python not found in PATH. Please install Python 3.10+ and rerun setup.'
-            Write-StepFooter
-            exit 1
+function Find-PythonAndMitm {
+    $result = @{
+        PythonExe  = $null
+        PythonDir  = $null
+        ScriptsDir = $null
+        MitmDump   = $null
+        Version    = $null
+    }
+
+    # 1. Active mitmdump in PATH
+    $mitmCmd = Get-Command mitmdump -ErrorAction SilentlyContinue
+    if ($mitmCmd) {
+        $result.MitmDump   = $mitmCmd.Source
+        $result.ScriptsDir = Split-Path -Parent $mitmCmd.Source
+    }
+
+    # 2. Check active Python in PATH (skipping broken WindowsApps stubs)
+    $pyCandidates = @(
+        (Get-Command py -ErrorAction SilentlyContinue),
+        (Get-Command python -ErrorAction SilentlyContinue),
+        (Get-Command python3 -ErrorAction SilentlyContinue)
+    )
+    foreach ($cand in $pyCandidates) {
+        if ($cand -and (Test-PythonBinary $cand.Source)) {
+            $result.PythonExe = $cand.Source
+            $result.PythonDir = Split-Path -Parent $cand.Source
+            break
         }
     }
 
-    $mitmdump = Find-MitmDump
-    if ($mitmdump) {
-        $ver = & $mitmdump.Source --version 2>&1 | Select-Object -First 1
-        Write-Ok "mitmproxy installed successfully: $ver"
-        Write-ItemLast "Binary: $($mitmdump.Source)"
-    } else {
-        Write-Fail 'mitmproxy installation completed, but binary not found in standard paths.'
-        Write-ItemLast 'Install manually: pip install mitmproxy'
-        Write-StepFooter
-        exit 1
+    # 3. Check 'py -3' launcher if pythonExe not resolved yet
+    if (-not $result.PythonExe) {
+        $pyLauncher = Get-Command py -ErrorAction SilentlyContinue
+        if ($pyLauncher) {
+            try {
+                $pyPath = & py -3 -c "import sys; print(sys.executable)" 2>$null
+                if ($pyPath -and (Test-PythonBinary $pyPath.Trim())) {
+                    $result.PythonExe = $pyPath.Trim()
+                    $result.PythonDir = Split-Path -Parent $result.PythonExe
+                }
+            } catch {}
+        }
     }
+
+    # 4. Search standard Windows installation locations for python.exe
+    if (-not $result.PythonExe) {
+        $searchDirs = @(
+            "$env:LOCALAPPDATA\Python\*\python.exe",
+            "$env:LOCALAPPDATA\Programs\Python\*\python.exe",
+            "$env:APPDATA\Python\*\python.exe",
+            "C:\Python3*\python.exe",
+            "C:\Program Files\Python3*\python.exe"
+        )
+        foreach ($pattern in $searchDirs) {
+            $foundPy = Get-Item $pattern -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+            if ($foundPy -and (Test-PythonBinary $foundPy.FullName)) {
+                $result.PythonExe = $foundPy.FullName
+                $result.PythonDir = $foundPy.DirectoryName
+                break
+            }
+        }
+    }
+
+    # 5. Check Scripts folder next to resolved python
+    if ($result.PythonExe -and -not $result.MitmDump) {
+        $tryScripts = Join-Path $result.PythonDir 'Scripts'
+        $tryMitm = Join-Path $tryScripts 'mitmdump.exe'
+        if (Test-Path $tryMitm) {
+            $result.MitmDump   = $tryMitm
+            $result.ScriptsDir = $tryScripts
+        }
+    }
+
+    # 6. Search standard Windows installation locations for mitmdump.exe
+    if (-not $result.MitmDump) {
+        $searchMitm = @(
+            "$env:LOCALAPPDATA\Python\*\Scripts\mitmdump.exe",
+            "$env:LOCALAPPDATA\Programs\Python\*\Scripts\mitmdump.exe",
+            "$env:APPDATA\Python\*\Scripts\mitmdump.exe",
+            "$env:USERPROFILE\.local\bin\mitmdump.exe"
+        )
+        foreach ($p in $searchMitm) {
+            $foundMitm = Get-Item $p -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+            if ($foundMitm) {
+                $result.MitmDump   = $foundMitm.FullName
+                $result.ScriptsDir = $foundMitm.DirectoryName
+                if (-not $result.PythonExe) {
+                    $candPy = Join-Path $foundMitm.Directory.Parent.FullName 'python.exe'
+                    if (Test-PythonBinary $candPy) {
+                        $result.PythonExe = $candPy
+                        $result.PythonDir = $foundMitm.Directory.Parent.FullName
+                    }
+                }
+                break
+            }
+        }
+    }
+
+    if (-not $result.ScriptsDir -and $result.PythonDir) {
+        $result.ScriptsDir = Join-Path $result.PythonDir 'Scripts'
+    }
+
+    # Update process-level PATH
+    $newPaths = @()
+    if ($result.ScriptsDir -and (Test-Path $result.ScriptsDir) -and ($env:Path -notlike "*$($result.ScriptsDir)*")) {
+        $newPaths += $result.ScriptsDir
+    }
+    if ($result.PythonDir -and (Test-Path $result.PythonDir) -and ($env:Path -notlike "*$($result.PythonDir)*")) {
+        $newPaths += $result.PythonDir
+    }
+    if ($newPaths.Count -gt 0) {
+        $env:Path = ($newPaths -join ';') + ';' + $env:Path
+    }
+
+    if ($result.PythonExe) {
+        try {
+            $result.Version = (& $result.PythonExe --version 2>&1 | Select-Object -First 1)
+        } catch {}
+    }
+
+    return $result
+}
+
+# ==========================================================================
+# Step 1: mitmproxy
+# ==========================================================================
+Write-StepHeader 1 'MITMPROXY CORE ENGINE'
+
+$pyInfo = Find-PythonAndMitm
+
+if (-not $pyInfo.PythonExe) {
+    Write-Fail 'Python 3.10+ is required but not found in PATH or standard directories.'
+    Write-ItemLast 'Install Python 3.10+ from https://python.org and rerun setup.'
+    Write-StepFooter
+    exit 1
+}
+
+if (-not $pyInfo.MitmDump) {
+    Write-Info 'mitmproxy not found in PATH — installing via pip...'
+    & $pyInfo.PythonExe -m pip install --upgrade mitmproxy certifi 2>&1 | Out-Null
+    $pyInfo = Find-PythonAndMitm
+}
+
+if ($pyInfo.MitmDump) {
+    $ver = & $pyInfo.MitmDump --version 2>&1 | Select-Object -First 1
+    Write-Ok "Detected existing installation: $ver"
+    Write-Item "Binary: $($pyInfo.MitmDump)"
+    Write-ItemLast "Runtime: $($pyInfo.PythonExe)"
+
+    # Persist to User PATH environment variable if missing
+    try {
+        $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+        $toAdd = @($pyInfo.PythonDir, $pyInfo.ScriptsDir) | Where-Object { $_ -and (Test-Path $_) -and $userPath -notlike "*$_*" }
+        if ($toAdd.Count -gt 0) {
+            $newUserPath = ($toAdd + $userPath) -join ';'
+            [Environment]::SetEnvironmentVariable('Path', $newUserPath, 'User')
+            Write-Ok 'Added Python & Scripts directories to User PATH'
+        }
+    } catch {}
+} else {
+    Write-Fail 'mitmproxy installation completed, but binary not found in standard paths.'
+    Write-ItemLast 'Install manually: pip install mitmproxy'
+    Write-StepFooter
+    exit 1
 }
 Write-StepFooter
 
@@ -173,9 +290,11 @@ if (Test-Path $Cert) {
 } else {
     Write-Info 'Generating fresh mitmproxy root CA certificate...'
     try {
-        $mitmBin = if ($mitmdump) { $mitmdump.Source } else { 'mitmdump' }
-        $proc = Start-Process -FilePath $mitmBin -ArgumentList '--listen-port','0','-q' -PassThru -WindowStyle Hidden
-        Start-Sleep -Seconds 3
+        $proc = Start-Process -FilePath $pyInfo.MitmDump -ArgumentList '--listen-port','0','-q' -PassThru -WindowStyle Hidden
+        for ($i = 0; $i -lt 10; $i++) {
+            Start-Sleep -Milliseconds 500
+            if (Test-Path $Cert) { break }
+        }
         try { $proc | Stop-Process -Force -ErrorAction SilentlyContinue } catch {}
     } catch {
         Write-Warn "Ephemeral process error: $_"
@@ -202,10 +321,10 @@ $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIde
     [Security.Principal.WindowsBuiltInRole]::Administrator
 )
 
-if ($isAdmin) {
-    Write-Info 'Running as Administrator — importing CA into Trusted Root CAs...'
-    $imported = $false
+$imported = $false
 
+if ($isAdmin) {
+    Write-Info 'Running as Administrator — importing CA into LocalMachine\Root...'
     $certutilCmd = Get-Command certutil -ErrorAction SilentlyContinue
     if ($certutilCmd) {
         $res = & certutil -addstore -f Root $Cert 2>&1
@@ -227,15 +346,37 @@ if ($isAdmin) {
             Write-ItemLast 'Certificate is now trusted system-wide'
             $imported = $true
         } catch {
-            Write-Warn "System import failed: $_"
+            Write-Warn "LocalMachine import failed: $_"
             Write-ItemLast "Run manually: certutil -addstore -f Root `"$Cert`""
         }
     }
 } else {
-    Write-Warn 'Current shell does NOT have Administrator privileges'
-    Write-Item 'Windows trust store auto-import skipped.'
-    Write-Item 'To trust the proxy CA certificate across Windows, run in an Admin terminal:'
-    Write-ItemLast "certutil -addstore -f Root `"$Cert`""
+    Write-Info 'Running as Standard User — importing CA into CurrentUser\Root...'
+    $certutilCmd = Get-Command certutil -ErrorAction SilentlyContinue
+    if ($certutilCmd) {
+        $res = & certutil -user -addstore -f Root $Cert 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-Ok 'Imported into CurrentUser\Root via certutil'
+            Write-ItemLast 'Certificate is now trusted for current user'
+            $imported = $true
+        }
+    }
+
+    if (-not $imported) {
+        try {
+            $certObj = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($Cert)
+            $store = New-Object System.Security.Cryptography.X509Certificates.X509Store('Root', 'CurrentUser')
+            $store.Open('ReadWrite')
+            $store.Add($certObj)
+            $store.Close()
+            Write-Ok 'Imported into CurrentUser\Root via .NET X509Store'
+            Write-ItemLast 'Certificate is now trusted for current user'
+            $imported = $true
+        } catch {
+            Write-Warn "CurrentUser import failed: $_"
+            Write-ItemLast "For system-wide trust, run in an Admin terminal: certutil -addstore -f Root `"$Cert`""
+        }
+    }
 }
 Write-StepFooter
 
@@ -245,22 +386,41 @@ Write-StepFooter
 Write-StepHeader 4 'COMBINED CA BUNDLE (GO TLS STACK)'
 
 $certifiBundle = $null
-try {
-    $pythonCmd = Get-Command python, python3 -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($pythonCmd) {
-        $certifiBundle = & $pythonCmd.Source -c "import certifi; print(certifi.where())" 2>$null
+if ($pyInfo.PythonExe) {
+    try {
+        $bundlePath = & $pyInfo.PythonExe -c "import certifi; print(certifi.where())" 2>$null
+        if ($bundlePath -and (Test-Path $bundlePath.Trim())) {
+            $certifiBundle = $bundlePath.Trim()
+        }
+    } catch {}
+}
+
+if (-not $certifiBundle -and $pyInfo.PythonDir) {
+    $searchCacerts = @(
+        (Join-Path $pyInfo.PythonDir 'Lib\site-packages\certifi\cacert.pem'),
+        (Join-Path $pyInfo.ScriptsDir '..\Lib\site-packages\certifi\cacert.pem'),
+        "$env:LOCALAPPDATA\Python\*\Lib\site-packages\certifi\cacert.pem",
+        "$env:APPDATA\Python\*\site-packages\certifi\cacert.pem"
+    )
+    foreach ($p in $searchCacerts) {
+        $foundCacert = Get-Item $p -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($foundCacert) {
+            $certifiBundle = $foundCacert.FullName
+            break
+        }
     }
-} catch {}
+}
 
 if ($certifiBundle -and (Test-Path $certifiBundle)) {
     $bundleContent = Get-Content $certifiBundle -Raw
     $mitmContent   = Get-Content $Cert -Raw
-    Set-Content -Path $Combined -Value ($bundleContent.TrimEnd() + "`r`n" + $mitmContent.Trim()) -Encoding ASCII
+    [System.IO.File]::WriteAllText($Combined, ($bundleContent.TrimEnd() + "`r`n" + $mitmContent.Trim() + "`r`n"), [System.Text.Encoding]::ASCII)
     Write-Ok 'Built bundle from Python certifi + mitmproxy CA'
     Write-Item "Source: $certifiBundle"
 } else {
     Copy-Item $Cert $Combined -Force
     Write-Ok 'Created standalone bundle (mitmproxy CA only)'
+    Write-Item 'Notice: For full public CA validation, install certifi: pip install certifi'
 }
 Write-ItemLast "Output bundle: $Combined"
 Write-StepFooter
@@ -274,31 +434,109 @@ $batWrapper = Join-Path $ScriptDir 'agy-proxy.bat'
 $batLines = @(
     '@echo off',
     'REM AGY through the security proxy -- Author: @uzii2208',
-    'set HTTPS_PROXY=http://127.0.0.1:8080',
-    'set https_proxy=http://127.0.0.1:8080',
-    'set HTTP_PROXY=http://127.0.0.1:8080',
-    'set http_proxy=http://127.0.0.1:8080',
-    "set `"SSL_CERT_FILE=$Combined`"",
-    'set AGY_CLI_DISABLE_SAFETY_FILTERING=true',
+    '',
+    'set "SCRIPT_DIR=%~dp0"',
+    'set "PORT=8080"',
+    '',
+    'rem Resolve CA certificate bundle dynamically',
+    'if exist "%USERPROFILE%\.mitmproxy\combined-ca-bundle.pem" (',
+    '    set "SSL_CERT_FILE=%USERPROFILE%\.mitmproxy\combined-ca-bundle.pem"',
+    ') else if exist "%USERPROFILE%\.mitmproxy\mitmproxy-ca-cert.pem" (',
+    '    set "SSL_CERT_FILE=%USERPROFILE%\.mitmproxy\mitmproxy-ca-cert.pem"',
+    ')',
+    '',
+    'set "HTTPS_PROXY=http://127.0.0.1:%PORT%"',
+    'set "https_proxy=http://127.0.0.1:%PORT%"',
+    'set "HTTP_PROXY=http://127.0.0.1:%PORT%"',
+    'set "http_proxy=http://127.0.0.1:%PORT%"',
+    'set "AGY_CLI_DISABLE_SAFETY_FILTERING=true"',
+    '',
+    'rem Check if proxy daemon is actively listening on port 8080',
+    'netstat -ano -p tcp | findstr /R /C:":%PORT% " | findstr /I "LISTENING" >nul 2>&1',
+    'if %ERRORLEVEL% NEQ 0 (',
+    '    echo   [●] Proxy not detected on 127.0.0.1:%PORT%. Auto-starting background daemon...',
+    '    powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "Start-Process powershell -ArgumentList ''-ExecutionPolicy Bypass -NoProfile -File \"\"%SCRIPT_DIR%run.ps1\"\" -Port %PORT%'' -WindowStyle Hidden"',
+    '    powershell -NoProfile -Command "$p=%PORT%; for($i=0;$i -lt 20;$i++){ if(Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue){ exit 0 }; Start-Sleep -Milliseconds 500 }; exit 1"',
+    '    if errorlevel 1 (',
+    '        echo   [▲] Proxy daemon did not respond on port %PORT% within 10s.',
+    '        echo   [▲] Run ''.\run.ps1'' in a separate terminal to view diagnostics.',
+    '        echo.',
+    '    ) else (',
+    '        echo   [✔] Proxy daemon active on 127.0.0.1:%PORT%.',
+    '    )',
+    ')',
+    '',
     'agy %*'
 )
-$batLines -join "`r`n" | Set-Content -Path $batWrapper -Encoding ASCII
-Write-Ok 'Created batch wrapper'
+[System.IO.File]::WriteAllText($batWrapper, (($batLines -join "`r`n") + "`r`n"), [System.Text.Encoding]::ASCII)
+Write-Ok 'Created portable batch wrapper (with auto-daemon check)'
 Write-Item "File: $batWrapper"
 
 $ps1Wrapper = Join-Path $ScriptDir 'agy-proxy-wrapper.ps1'
 $ps1Lines = @(
     '# AGY through the security proxy -- Author: @uzii2208',
-    "`$env:HTTPS_PROXY = 'http://127.0.0.1:8080'",
-    "`$env:https_proxy = 'http://127.0.0.1:8080'",
-    "`$env:HTTP_PROXY  = 'http://127.0.0.1:8080'",
-    "`$env:http_proxy  = 'http://127.0.0.1:8080'",
-    "`$env:SSL_CERT_FILE = '$Combined'",
-    "`$env:AGY_CLI_DISABLE_SAFETY_FILTERING = 'true'",
-    '& agy @args'
+    '[CmdletBinding()]',
+    'param(',
+    '    [Parameter(ValueFromRemainingArguments = $true)]',
+    '    [string[]]$AgyArgs',
+    ')',
+    '',
+    '$Port = 8080',
+    '$CertBundle = Join-Path $env:USERPROFILE ''.mitmproxy\combined-ca-bundle.pem''',
+    '',
+    'function Test-ProxyPort {',
+    '    param([int]$p = 8080)',
+    '    try {',
+    '        $tcp = New-Object System.Net.Sockets.TcpClient',
+    '        $iar = $tcp.BeginConnect(''127.0.0.1'', $p, $null, $null)',
+    '        if ($iar.AsyncWaitHandle.WaitOne(600, $false)) {',
+    '            $tcp.EndConnect($iar)',
+    '            $tcp.Close()',
+    '            return $true',
+    '        }',
+    '        $tcp.Close()',
+    '        return $false',
+    '    } catch {',
+    '        return $false',
+    '    }',
+    '}',
+    '',
+    'if (-not (Test-ProxyPort $Port)) {',
+    '    Write-Host ''  ▲ [!] OFSPRO proxy daemon is not running on 127.0.0.1:'' -NoNewline -ForegroundColor Yellow',
+    '    Write-Host $Port -ForegroundColor Cyan',
+    '    Write-Host ''  ● Auto-starting OFSPRO background proxy daemon...'' -ForegroundColor Cyan',
+    '    $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path',
+    '    $runScript = Join-Path $ScriptDir ''run.ps1''',
+    '    if (Test-Path $runScript) {',
+    '        Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$runScript`" -Port $Port -Level 3" -WindowStyle Hidden',
+    '        $started = $false',
+    '        for ($i = 0; $i -lt 8; $i++) {',
+    '            Start-Sleep -Milliseconds 500',
+    '            if (Test-ProxyPort $Port) {',
+    '                $started = $true',
+    '                break',
+    '            }',
+    '        }',
+    '        if ($started) {',
+    '            Write-Host "  ✔ Proxy daemon online and listening on 127.0.0.1:$Port" -ForegroundColor Green',
+    '        } else {',
+    '            Write-Host ''  ▲ Auto-start pending. If connection fails, launch in another terminal:'' -ForegroundColor Yellow',
+    '            Write-Host ''     .\run.ps1 -Level 3'' -ForegroundColor White',
+    '        }',
+    '    }',
+    '}',
+    '',
+    '$env:HTTPS_PROXY = "http://127.0.0.1:$Port"',
+    '$env:https_proxy = "http://127.0.0.1:$Port"',
+    '$env:HTTP_PROXY  = "http://127.0.0.1:$Port"',
+    '$env:http_proxy  = "http://127.0.0.1:$Port"',
+    '$env:SSL_CERT_FILE = $CertBundle',
+    '$env:AGY_CLI_DISABLE_SAFETY_FILTERING = ''true''',
+    '',
+    '& agy @AgyArgs'
 )
-$ps1Lines -join "`r`n" | Set-Content -Path $ps1Wrapper -Encoding UTF8
-Write-Ok 'Created PowerShell wrapper'
+[System.IO.File]::WriteAllText($ps1Wrapper, (($ps1Lines -join "`r`n") + "`r`n"), [System.Text.Encoding]::UTF8)
+Write-Ok 'Created PowerShell wrapper (with auto-daemon check)'
 Write-ItemLast "File: $ps1Wrapper"
 Write-StepFooter
 

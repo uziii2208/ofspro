@@ -31,7 +31,9 @@ from addons.prompts import needs_rewrite
 from addons.transformer import StrategyEngine
 from addons.localhost_lure import TargetMap, get_localhost_frame
 
-DUMP_DIR = "/tmp/agyproxy_dumps"
+import tempfile
+
+DUMP_DIR = os.path.join(tempfile.gettempdir(), "agyproxy_dumps")
 os.makedirs(DUMP_DIR, exist_ok=True)
 
 GEMINI_HOST_PATTERNS = [
