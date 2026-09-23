@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Offensive Security Gemini Proxy - Windows Setup
@@ -244,7 +244,7 @@ if (-not $pyInfo.PythonExe) {
 }
 
 if (-not $pyInfo.MitmDump) {
-    Write-Info 'mitmproxy not found in PATH — installing via pip...'
+    Write-Info 'mitmproxy not found in PATH -- installing via pip...'
     & $pyInfo.PythonExe -m pip install --upgrade mitmproxy certifi 2>&1 | Out-Null
     $pyInfo = Find-PythonAndMitm
 }
@@ -324,7 +324,7 @@ $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIde
 $imported = $false
 
 if ($isAdmin) {
-    Write-Info 'Running as Administrator — importing CA into LocalMachine\Root...'
+    Write-Info 'Running as Administrator -- importing CA into LocalMachine\Root...'
     $certutilCmd = Get-Command certutil -ErrorAction SilentlyContinue
     if ($certutilCmd) {
         $res = & certutil -addstore -f Root $Cert 2>&1
@@ -351,7 +351,7 @@ if ($isAdmin) {
         }
     }
 } else {
-    Write-Info 'Running as Standard User — importing CA into CurrentUser\Root...'
+    Write-Info 'Running as Standard User -- importing CA into CurrentUser\Root...'
     $certutilCmd = Get-Command certutil -ErrorAction SilentlyContinue
     if ($certutilCmd) {
         $res = & certutil -user -addstore -f Root $Cert 2>&1
@@ -454,15 +454,17 @@ $batLines = @(
     'rem Check if proxy daemon is actively listening on port 8080',
     'netstat -ano -p tcp | findstr /R /C:":%PORT% " | findstr /I "LISTENING" >nul 2>&1',
     'if %ERRORLEVEL% NEQ 0 (',
-    '    echo   [●] Proxy not detected on 127.0.0.1:%PORT%. Auto-starting background daemon...',
-    '    powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "Start-Process powershell -ArgumentList ''-ExecutionPolicy Bypass -NoProfile -File \"\"%SCRIPT_DIR%run.ps1\"\" -Port %PORT%'' -WindowStyle Hidden"',
-    '    powershell -NoProfile -Command "$p=%PORT%; for($i=0;$i -lt 20;$i++){ if(Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue){ exit 0 }; Start-Sleep -Milliseconds 500 }; exit 1"',
+    '    echo   [*] Proxy not detected on 127.0.0.1:%PORT%. Auto-starting background daemon...',
+    '    powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command "Start-Process -FilePath powershell.exe -ArgumentList @(''-NoProfile'',''-ExecutionPolicy'',''Bypass'',''-File'',''%SCRIPT_DIR%run.ps1'',''-Port'',''%PORT%'') -WindowStyle Hidden"',
+    '    ',
+    '    rem Wait up to 10 seconds (20 x 500ms) for the proxy to initialize',
+    '    powershell -NoProfile -Command "$p=%PORT%; for($i=0;$i -lt 20;$i++){ if(Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue){ exit 0 }; try { $c=New-Object System.Net.Sockets.TcpClient; $a=$c.BeginConnect(''127.0.0.1'',$p,$null,$null); if($a.AsyncWaitHandle.WaitOne(200,$false)){ $c.EndConnect($a); $c.Close(); exit 0 }; $c.Close() } catch {}; Start-Sleep -Milliseconds 500 }; exit 1"',
     '    if errorlevel 1 (',
-    '        echo   [▲] Proxy daemon did not respond on port %PORT% within 10s.',
-    '        echo   [▲] Run ''.\run.ps1'' in a separate terminal to view diagnostics.',
+    '        echo   [!] Proxy daemon did not respond on port %PORT% within 10s.',
+    '        echo   [!] Run ''.\run.ps1'' in a separate terminal to view diagnostics.',
     '        echo.',
     '    ) else (',
-    '        echo   [✔] Proxy daemon active on 127.0.0.1:%PORT%.',
+    '        echo   [+] Proxy daemon active on 127.0.0.1:%PORT%.',
     '    )',
     ')',
     '',
@@ -481,59 +483,81 @@ $ps1Lines = @(
     '    [string[]]$AgyArgs',
     ')',
     '',
+    '$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path',
     '$Port = 8080',
-    '$CertBundle = Join-Path $env:USERPROFILE ''.mitmproxy\combined-ca-bundle.pem''',
     '',
-    'function Test-ProxyPort {',
-    '    param([int]$p = 8080)',
-    '    try {',
-    '        $tcp = New-Object System.Net.Sockets.TcpClient',
-    '        $iar = $tcp.BeginConnect(''127.0.0.1'', $p, $null, $null)',
-    '        if ($iar.AsyncWaitHandle.WaitOne(600, $false)) {',
-    '            $tcp.EndConnect($iar)',
-    '            $tcp.Close()',
-    '            return $true',
-    '        }',
-    '        $tcp.Close()',
-    '        return $false',
-    '    } catch {',
-    '        return $false',
-    '    }',
-    '}',
+    '# Dynamic CA Certificate resolution (no hardcoded user paths)',
+    '$CertDir  = Join-Path $env:USERPROFILE ''.mitmproxy''',
+    '$Combined = Join-Path $CertDir ''combined-ca-bundle.pem''',
+    '$Cert     = Join-Path $CertDir ''mitmproxy-ca-cert.pem''',
     '',
-    'if (-not (Test-ProxyPort $Port)) {',
-    '    Write-Host ''  ▲ [!] OFSPRO proxy daemon is not running on 127.0.0.1:'' -NoNewline -ForegroundColor Yellow',
-    '    Write-Host $Port -ForegroundColor Cyan',
-    '    Write-Host ''  ● Auto-starting OFSPRO background proxy daemon...'' -ForegroundColor Cyan',
-    '    $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path',
-    '    $runScript = Join-Path $ScriptDir ''run.ps1''',
-    '    if (Test-Path $runScript) {',
-    '        Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$runScript`" -Port $Port -Level 3" -WindowStyle Hidden',
-    '        $started = $false',
-    '        for ($i = 0; $i -lt 8; $i++) {',
-    '            Start-Sleep -Milliseconds 500',
-    '            if (Test-ProxyPort $Port) {',
-    '                $started = $true',
-    '                break',
-    '            }',
-    '        }',
-    '        if ($started) {',
-    '            Write-Host "  ✔ Proxy daemon online and listening on 127.0.0.1:$Port" -ForegroundColor Green',
-    '        } else {',
-    '            Write-Host ''  ▲ Auto-start pending. If connection fails, launch in another terminal:'' -ForegroundColor Yellow',
-    '            Write-Host ''     .\run.ps1 -Level 3'' -ForegroundColor White',
-    '        }',
-    '    }',
+    'if (Test-Path $Combined) {',
+    '    $env:SSL_CERT_FILE = $Combined',
+    '} elseif (Test-Path $Cert) {',
+    '    $env:SSL_CERT_FILE = $Cert',
+    '} else {',
+    '    Write-Host "  ▲ Warning: MITM CA certificate not found in $CertDir" -ForegroundColor Yellow',
     '}',
     '',
     '$env:HTTPS_PROXY = "http://127.0.0.1:$Port"',
     '$env:https_proxy = "http://127.0.0.1:$Port"',
     '$env:HTTP_PROXY  = "http://127.0.0.1:$Port"',
     '$env:http_proxy  = "http://127.0.0.1:$Port"',
-    '$env:SSL_CERT_FILE = $CertBundle',
     '$env:AGY_CLI_DISABLE_SAFETY_FILTERING = ''true''',
     '',
-    '& agy @AgyArgs'
+    'function Test-ProxyListening {',
+    '    param([int]$CheckPort = 8080)',
+    '    $conn = Get-NetTCPConnection -LocalPort $CheckPort -State Listen -ErrorAction SilentlyContinue',
+    '    if ($conn) { return $true }',
+    '    try {',
+    '        $tcp = New-Object System.Net.Sockets.TcpClient',
+    '        $iar = $tcp.BeginConnect(''127.0.0.1'', $CheckPort, $null, $null)',
+    '        $wait = $iar.AsyncWaitHandle.WaitOne(400, $false)',
+    '        if ($wait -and $tcp.Connected) {',
+    '            $tcp.EndConnect($iar)',
+    '            $tcp.Close()',
+    '            return $true',
+    '        }',
+    '        $tcp.Close()',
+    '    } catch {}',
+    '    return $false',
+    '}',
+    '',
+    '# Auto-start proxy if not running',
+    'if (-not (Test-ProxyListening -CheckPort $Port)) {',
+    '    Write-Host "  ● Proxy not detected on 127.0.0.1:$Port. Auto-starting background daemon..." -ForegroundColor Cyan',
+    '    $runPs1 = Join-Path $ScriptDir ''run.ps1''',
+    '    if (Test-Path $runPs1) {',
+    '        $startArgs = @(''-ExecutionPolicy'', ''Bypass'', ''-NoProfile'', ''-WindowStyle'', ''Hidden'', ''-File'', $runPs1, ''-Port'', $Port)',
+    '        Start-Process -FilePath ''powershell.exe'' -ArgumentList $startArgs -WindowStyle Hidden',
+    '        $ready = $false',
+    '        for ($i = 0; $i -lt 20; $i++) {',
+    '            Start-Sleep -Milliseconds 500',
+    '            if (Test-ProxyListening -CheckPort $Port) {',
+    '                $ready = $true',
+    '                break',
+    '            }',
+    '        }',
+    '        if ($ready) {',
+    '            Write-Host "  ✔ Proxy daemon active on 127.0.0.1:$Port." -ForegroundColor Green',
+    '        } else {',
+    '            Write-Host "  ▲ Proxy daemon did not respond on port $Port within 10s." -ForegroundColor Yellow',
+    '            Write-Host "  ▲ Run ''.\run.ps1'' in a separate terminal to view diagnostics." -ForegroundColor Yellow',
+    '        }',
+    '    } else {',
+    '        Write-Host "  ▲ run.ps1 not found at $runPs1. Please start proxy manually." -ForegroundColor Yellow',
+    '    }',
+    '}',
+    '',
+    'try {',
+    '    if ($AgyArgs -and $AgyArgs.Count -gt 0) {',
+    '        & agy @AgyArgs',
+    '    } else {',
+    '        & agy',
+    '    }',
+    '} catch {',
+    '    Write-Host "  ✖ Failed to execute ''agy'': $_" -ForegroundColor Red',
+    '}'
 )
 [System.IO.File]::WriteAllText($ps1Wrapper, (($ps1Lines -join "`r`n") + "`r`n"), [System.Text.Encoding]::UTF8)
 Write-Ok 'Created PowerShell wrapper (with auto-daemon check)'
@@ -546,7 +570,7 @@ Write-StepFooter
 Write-Host ''
 Write-Host '  ╭───────────────────────────────────────────────────────────╮' -ForegroundColor Green
 Write-Host '  │  ' -ForegroundColor Green -NoNewline
-Write-Host '✔ SETUP COMPLETE — SYSTEM READY FOR OPERATION' -ForegroundColor Green -NoNewline
+Write-Host '✔ SETUP COMPLETE -- SYSTEM READY FOR OPERATION' -ForegroundColor Green -NoNewline
 Write-Host '            │' -ForegroundColor Green
 Write-Host '  ╰───────────────────────────────────────────────────────────╯' -ForegroundColor Green
 Write-Host ''

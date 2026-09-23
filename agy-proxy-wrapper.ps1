@@ -1,4 +1,4 @@
-# AGY through the security proxy -- Author: @uzii2208
+﻿# AGY through the security proxy -- Author: @uzii2208
 [CmdletBinding()]
 param(
     [Parameter(ValueFromRemainingArguments = $true)]

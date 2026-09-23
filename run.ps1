@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Offensive Security Gemini Proxy - Quick Start for AGY CLI (Windows)
@@ -350,7 +350,7 @@ $mitmdumpExe = Find-MitmDump -PythonExe $pythonExe
 # ==========================================================================
 $portInUse = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
 if ($portInUse) {
-    Write-Warn "Port $Port is in use — clearing existing listener and child tree..."
+    Write-Warn "Port $Port is in use -- clearing existing listener and child tree..."
     foreach ($conn in $portInUse) {
         if ($conn.OwningProcess -gt 4) {
             try {
@@ -375,7 +375,7 @@ if (-not (Test-Path $CertDir)) {
 }
 
 if (-not (Test-Path $Cert)) {
-    Write-Info 'CA certificate missing — auto-generating...'
+    Write-Info 'CA certificate missing -- auto-generating...'
     $mitmBin = if ($mitmdumpExe) { $mitmdumpExe } else { 'mitmdump' }
     try {
         $proc = Start-Process -FilePath $mitmBin -ArgumentList '--listen-port','0','-q' -PassThru -WindowStyle Hidden
@@ -520,7 +520,7 @@ if ($WithAgy) {
     Write-Ok 'Proxy stopped cleanly. Session ended.'
     Write-Host ''
 } else {
-    # ── Proxy-only mode — run in foreground ───────────────────
+    # ── Proxy-only mode -- run in foreground ───────────────────
     $pyVer = & $pythonExe --version 2>&1
     Write-Host ''
     Write-Host '  ╭─ PREFLIGHT READY ─────────────────────────────────────────╮' -ForegroundColor Cyan
