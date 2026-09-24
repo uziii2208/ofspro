@@ -137,6 +137,31 @@ python start_proxy.py -T 10.10.10.50 -T target.htb
 # Look for the "LOCALHOST LURE ACTIVE" box in the startup banner
 ```
 
+## Web UI Dashboard Issues
+
+### Cannot access Web UI on `http://127.0.0.1:8081`
+
+1. **Verify Web UI is running**:
+   - Check the startup banner in the console for:
+     ```
+     Web UI         ON (http://127.0.0.1:8081)
+     ```
+2. **Check for port 8081 conflict**:
+   - Another process may already be bound to port 8081. Change the Web UI port:
+     ```bash
+     python start_proxy.py --web-port 8082
+     # or
+     ./run.sh --web-port 8082
+     .\run.ps1 -WebPort 8082
+     ```
+3. **Verify proxy wasn't started with `--no-web` / `-NoWeb`**:
+   - If disabled, the web server thread will not start.
+
+### Live feed shows "RECONNECTING" or "OFFLINE"
+
+1. The Web UI automatically attempts to reconnect to `/api/stream` every 3 seconds if the proxy is restarted.
+2. Ensure you are accessing the dashboard from `localhost` / `127.0.0.1` so CORS and loopback bindings resolve cleanly.
+
 ## Performance
 
 ### Slow responses in swap mode

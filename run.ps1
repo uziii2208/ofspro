@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
     Offensive Security Gemini Proxy - Quick Start for AGY CLI (Windows)
@@ -22,7 +22,9 @@
 .PARAMETER Kill
     Kill running proxy processes
 .PARAMETER Web
-    Enable mitmproxy web UI
+    Enable OFSPRO Web UI dashboard (enabled by default)
+.PARAMETER NoWeb
+    Disable OFSPRO Web UI dashboard
 .PARAMETER WebPort
     Web UI port (default: 8081)
 .PARAMETER NoClean
@@ -63,6 +65,7 @@ param(
 
     [Alias('w')]
     [switch]$Web,
+    [switch]$NoWeb,
     [int]$WebPort = 8081,
 
     [switch]$NoClean,
@@ -423,7 +426,8 @@ if ($NoRetry)        { $pyArgs += '--no-retry' }
 if ($NoTools)        { $pyArgs += '--no-tools' }
 if ($NoHistory)      { $pyArgs += '--no-history' }
 if ($NoContinuation) { $pyArgs += '--no-continuation' }
-if ($Web)            { $pyArgs += '--web'; $pyArgs += '--web-port'; $pyArgs += $WebPort }
+if ($NoWeb)          { $pyArgs += '--no-web' }
+else                 { $pyArgs += '--web-port'; $pyArgs += $WebPort }
 
 # Check verbose from CmdletBinding
 if ($PSCmdlet.MyInvocation.BoundParameters.ContainsKey('Verbose') -or $VerbosePreference -eq 'Continue') {

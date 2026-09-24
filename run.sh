@@ -3,9 +3,11 @@
 # Author: @uzii2208
 #
 # Usage:
-#   ./run.sh                                    # Start proxy (default level 2)
+#   ./run.sh                                    # Start proxy (default level 2 + Web UI on :8081)
 #   ./run.sh --level 3                          # Nuclear mode
 #   ./run.sh --with-agy                         # Also launch AGY through proxy
+#   ./run.sh --no-web                           # Disable Web UI dashboard
+#   ./run.sh --web-port 8082                    # Custom Web UI port
 #   ./run.sh --kill                             # Kill running proxy processes
 #
 # Localhost Lure (target → 127.0.1.x so Gemini thinks self-testing):
@@ -163,6 +165,10 @@ while [ $# -gt 0 ]; do
             WEB_UI=true
             shift
             ;;
+        --no-web)
+            NO_WEB=true
+            shift
+            ;;
         --web-port)
             WEB_PORT="$2"
             shift 2
@@ -181,7 +187,8 @@ while [ $# -gt 0 ]; do
             echo -e "    ${Y}-p, --port <PORT>${N}       Proxy Listen Port (default: 8080)"
             echo -e "    ${Y}--with-agy${N}              Start proxy in background and launch AGY automatically"
             echo -e "    ${Y}--kill${N}                  Terminate all running proxy instances"
-            echo -e "    ${Y}-w, --web${N}               Enable mitmproxy Web UI (default port: 8081)"
+            echo -e "    ${Y}-w, --web${N}               Enable OFSPRO Web UI dashboard (enabled by default)"
+            echo -e "    ${Y}--no-web${N}                Disable OFSPRO Web UI dashboard"
             echo -e "    ${Y}--web-port <PORT>${N}       Web UI port (default: 8081)"
             echo ""
             echo -e "  ${C}${B}LOCALHOST LURE:${N}"
@@ -292,8 +299,10 @@ fi
 if [ "$NO_UNMAP" = true ]; then
     FORWARD_ARGS+=("--no-unmap")
 fi
-if [ "$WEB_UI" = true ]; then
-    FORWARD_ARGS+=("--web" "--web-port" "$WEB_PORT")
+if [ "$NO_WEB" = true ]; then
+    FORWARD_ARGS+=("--no-web")
+elif [ -n "$WEB_PORT" ]; then
+    FORWARD_ARGS+=("--web-port" "$WEB_PORT")
 fi
 FORWARD_ARGS+=("${EXTRA_ARGS[@]}")
 

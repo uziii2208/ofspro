@@ -98,6 +98,19 @@ All 5 harm categories set to `BLOCK_NONE`.
 - topP: 0.95, topK: 64 (wider sampling)
 - maxOutputTokens: 8192 (no truncation)
 
+### 7. Real-Time Web Telemetry & Dynamic Control Bridge
+
+The embedded Web Bridge (`addons/web_bridge.py`) hooks directly into the proxy pipeline:
+
+- **Bidirectional State Sync**:
+  - The proxy engine queries thread-safe configuration (`ProxyState`) on every request, allowing operators to change bypass levels (0–3), toggle response cleaning, or adjust injection mechanisms dynamically from the browser without restarting mitmproxy.
+- **Dynamic Lure Target Management**:
+  - Operators can view all active target-to-loopback mappings and register new targets on-the-fly (`/api/lures`). Newly registered targets immediately begin rewriting subsequent requests.
+- **Server-Sent Events (SSE) Streaming**:
+  - Emits real-time flow events to connected Web UI clients as requests arrive, get rewritten, and stream back from Gemini.
+- **Differential Payload Inspection**:
+  - Captures original AGY user input vs transformed environmental deception payloads delivered to Gemini API for live auditing.
+
 ## Swap Mode
 
 Routes to unrestricted backend. No guardrails to fight.

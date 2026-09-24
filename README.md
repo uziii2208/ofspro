@@ -202,8 +202,9 @@ python start_proxy.py --no-history           # Disable history injection
 python start_proxy.py --no-continuation      # Disable continuation trick
 python start_proxy.py --no-clean             # Disable response cleaning
 python start_proxy.py --no-retry             # Disable auto-retry
-python start_proxy.py --port 9090            # Custom port
-python start_proxy.py --web                  # mitmproxy web UI
+python start_proxy.py --port 9090            # Custom proxy listen port
+python start_proxy.py --web-port 8081        # Custom Web UI port (default: 8081)
+python start_proxy.py --no-web               # Disable Web UI dashboard
 python start_proxy.py --verbose              # Debug logging
 
 # Localhost Lure
@@ -212,6 +213,18 @@ python start_proxy.py -T 10.10.10.50 -T target.htb # Multi-target lure
 python start_proxy.py --lure-auto                   # Auto-capture all external IPs
 python start_proxy.py -T target.com --no-unmap      # Keep loopback in responses
 ```
+
+## Interactive Web UI Dashboard
+
+OFSPRO features a built-in real-time monitoring and control dashboard accessible at `http://127.0.0.1:8081`:
+
+- **Design**: Styled with Apple SF Pro Display & SF Pro Text, glassmorphic Cupertino luxury obsidian dark mode (`#0A0D14`), and neon security accents.
+- **Real-Time Telemetry Feed**: Live Server-Sent Events (`/api/stream`) displaying intercepted flows, request payloads, response cleaning status, and latency breakdowns.
+- **Dynamic Control Center**: Adjust bypass levels (L0 Light → L3 Nuclear) and toggles (Auto-Rewrite, Response Cleaning, Tool Injection, Chat History, Auto-Capture) on-the-fly without proxy restarts.
+- **Interactive Localhost Lure Manager**: Add, inspect, and remove active target-to-loopback mappings (`10.10.10.x → 127.0.1.x`) directly in the browser.
+- **Side-by-Side & Unified Diff Viewer**: Inspect exactly what AGY sent vs. what Gemini API received after environmental deception and lure transformations.
+- **Deception Playground**: Dry-run security prompts and preview assigned thinking budgets and rewritten targets before running them live.
+- **Zero-Dependency**: Served by an embedded Python HTTP server with pure vanilla ES6+ & CSS3 — no npm, node_modules, or build pipelines required.
 
 ## Integration with mcp2agy
 
@@ -231,7 +244,7 @@ agy
 ## Project Structure
 
 ```
-├── start_proxy.py              CLI launcher (cross-platform)
+├── start_proxy.py              CLI launcher (cross-platform, starts proxy + Web UI)
 ├── run.sh                      Quick start (Linux/macOS)
 ├── run.ps1                     Quick start (Windows PowerShell)
 ├── setup.sh                    Install + wrapper (Linux/macOS)
@@ -240,11 +253,16 @@ agy
 ├── requirements.txt            Dependencies
 ├── addons/
 │   ├── gemini_rewriter.py      Main addon (tool injection + env deception + lure)
+│   ├── web_bridge.py           Embedded HTTP server + REST/SSE bridge for Web UI
 │   ├── localhost_lure.py       Localhost lure engine (target → 127.0.1.x bidirectional)
 │   ├── prompts.py              Tool-aware system instructions
 │   ├── transformer.py          Environmental deception + context flooding
 │   ├── response_filter.py      Response cleaning
 │   └── model_swap.py           Gemini ↔ OpenAI format converter (optional fallback)
+├── web/
+│   ├── index.html              Dashboard single-page application
+│   ├── styles.css              SF Pro Cupertino dark mode styling & animations
+│   └── app.js                  Real-time SSE client, diff engine & lure manager
 └── docs/
     ├── SETUP.md                Setup guide (Linux/macOS/Windows)
     ├── LAYERS.md               Architecture deep dive

@@ -192,6 +192,34 @@ agy
 # [AGY] PASS | mode=direct total=1 ...
 ```
 
+## Web UI Dashboard Setup & Usage
+
+OFSPRO automatically starts the real-time Web UI Dashboard on port `8081` alongside the proxy (port `8080`).
+
+### Accessing the Dashboard
+
+Once the proxy is running:
+1. Open your web browser.
+2. Navigate to: `http://127.0.0.1:8081`
+3. The dashboard connects via real-time SSE (`/api/stream`) to display live traffic telemetry, active lures, latency metrics, and bypass status.
+
+### Customizing Ports
+
+```bash
+# Run proxy on 9090 and Web UI on 8082
+python start_proxy.py --port 9090 --web-port 8082
+```
+
+### Disabling Web UI
+
+If you only need headless command-line proxying:
+```bash
+python start_proxy.py --no-web
+# or in run scripts:
+./run.sh --no-web
+.\run.ps1 -NoWeb
+```
+
 ---
 
 *Author: [@uzii2208](https://github.com/uzii2208)*
