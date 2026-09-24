@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Offensive Security Gemini Proxy - Quick Start for AGY CLI (Windows)
@@ -401,7 +401,29 @@ if (-not (Test-Path $Cert)) {
 if (-not (Test-Path $Combined) -or (Get-Item $Cert).LastWriteTime -gt (Get-Item $Combined -ErrorAction SilentlyContinue).LastWriteTime) {
     Write-Info 'Generating Go-compatible combined CA bundle...'
     $certifiBundle = $null
-    try { $certifiBundle = (& $pythonExe -c "import certifi; print(certifi.where())" 2>$null) } catch {}
+    if ($pythonExe) {
+        try {
+            $bundleOutput = & $pythonExe -c 'import certifi; print(certifi.where())' 2>$null
+            if ($bundleOutput -and (Test-Path $bundleOutput.Trim())) {
+                $certifiBundle = $bundleOutput.Trim()
+            }
+        } catch {}
+    }
+    if (-not $certifiBundle -and $pythonExe) {
+        $searchCacerts = @(
+            (Join-Path (Split-Path -Parent $pythonExe) 'Lib\site-packages\certifi\cacert.pem'),
+            (Join-Path (Split-Path -Parent $pythonExe) '..\Lib\site-packages\certifi\cacert.pem'),
+            "$env:LOCALAPPDATA\Python\*\Lib\site-packages\certifi\cacert.pem",
+            "$env:APPDATA\Python\*\site-packages\certifi\cacert.pem"
+        )
+        foreach ($p in $searchCacerts) {
+            $foundCacert = Get-Item $p -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($foundCacert) {
+                $certifiBundle = $foundCacert.FullName
+                break
+            }
+        }
+    }
     if ($certifiBundle -and (Test-Path $certifiBundle)) {
         $content = (Get-Content $certifiBundle -Raw).TrimEnd() + "`r`n" + (Get-Content $Cert -Raw).Trim()
         Set-Content -Path $Combined -Value $content -Encoding ASCII

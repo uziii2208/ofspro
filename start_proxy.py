@@ -208,6 +208,8 @@ def main():
                         help="Auto-capture any non-loopback IP and lure it")
     parser.add_argument("--no-unmap", action="store_true",
                         help="Don't map loopback back to real targets in responses")
+    parser.add_argument("--verbose", "-v", action="store_true",
+                        help="Enable verbose / debug output")
 
     args = parser.parse_args()
     check_deps()
