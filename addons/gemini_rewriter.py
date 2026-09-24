@@ -91,6 +91,20 @@ class GeminiRewriter:
                     mapped = self.lure.add(t)
                     ctx.log.warn(f"[AGY] Lure: {t} → {mapped}")
 
+        # Web UI Bridge & API Server initialization
+        self.state = None
+        try:
+            from addons.web_bridge import get_state, start_web_server
+            self.state = get_state(self.lure)
+            web_enabled = os.environ.get("PROXY_WEB", "1") == "1"
+            web_port = int(os.environ.get("PROXY_WEB_PORT", "8081"))
+            if web_enabled:
+                res = start_web_server(port=web_port, lure_map=self.lure)
+                if res:
+                    ctx.log.warn(f"[AGY Web UI] Dashboard live at http://127.0.0.1:{res[1]}")
+        except Exception as e:
+            ctx.log.error(f"[AGY Web UI] Web bridge init error: {e}")
+
     def _is_target(self, flow):
         host = flow.request.pretty_host
         if not any(p in host for p in GEMINI_HOST_PATTERNS):
@@ -134,7 +148,17 @@ class GeminiRewriter:
         if not self._is_target(flow):
             return
 
+        flow.metadata["ofspro_start"] = time.time()
         self.stats["total"] += 1
+
+        # Synchronize dynamic configuration from Web UI State
+        if getattr(self, "state", None):
+            cfg = self.state.get_config()
+            self.level = cfg.get("level", self.level)
+            self.strategy = StrategyEngine(self.level)
+            self.enable_clean = cfg.get("clean", self.enable_clean)
+            self.rewrite_filter = cfg.get("rewrite_mode", self.rewrite_filter)
+
         body = self._parse(flow.request)
         if body is None:
             return
@@ -266,6 +290,38 @@ class GeminiRewriter:
         self.stats["modified"] += 1
         ctx.log.warn(f"[AGY] MODIFIED (level={self.level})")
 
+        # Record flow to Web UI state for real-time monitoring
+        if getattr(self, "state", None):
+            transformed_user_text = ""
+            for item in reversed(inner.get("contents", [])):
+                if isinstance(item, dict) and item.get("role") == "user":
+                    for p in item.get("parts", []):
+                        if isinstance(p, dict) and "text" in p:
+                            transformed_user_text = p["text"]
+                            break
+                    break
+
+            is_deceptive = (self.level >= 2 or self.lure.active)
+            endpoint = flow.request.path.split("/")[-1].split("?")[0] if flow.request.path else "streamGenerateContent"
+            flow_record = {
+                "id": f"req_{int(time.time() * 1000) % 100000}",
+                "timestamp": time.strftime("%H:%M:%S") + f".{int(time.time() * 1000) % 1000:03d}",
+                "method": flow.request.method,
+                "endpoint": endpoint,
+                "host": flow.request.pretty_host,
+                "query": user_text,
+                "transformedQuery": transformed_user_text or user_text,
+                "type": "deceptive" if is_deceptive else "passthrough",
+                "badge": "DECEPTIVE" if is_deceptive else "PASSTHROUGH",
+                "badgeClass": "badge-deceptive" if is_deceptive else "badge-passthrough",
+                "budget": THINKING_BUDGETS.get(self.level, 512),
+                "latency": 0,
+                "luredIp": ", ".join(t[0] for t in self.lure.table()) if self.lure.table() else "None",
+                "safetyRatings": "NEGLIGIBLE",
+            }
+            flow.metadata["ofspro_record_id"] = flow_record["id"]
+            self.state.add_flow(flow_record)
+
     # ── RESPONSE HANDLER ──────────────────────────────────────
 
     def response(self, flow):
@@ -302,6 +358,27 @@ class GeminiRewriter:
                     flow.response.content = json.dumps(body).encode("utf-8")
                     flow.response.headers["content-length"] = str(len(flow.response.content))
 
+        # Update telemetry and flow in Web UI state
+        if getattr(self, "state", None):
+            start_t = flow.metadata.get("ofspro_start", time.time())
+            latency_ms = max(1, int((time.time() - start_t) * 1000))
+            rec_id = flow.metadata.get("ofspro_record_id")
+            was_cleaned = flow.metadata.get("ofspro_cleaned", False)
+
+            if rec_id:
+                updates = {
+                    "latency": latency_ms,
+                    "status_code": flow.response.status_code,
+                }
+                if was_cleaned:
+                    updates.update({
+                        "badge": "CLEANED",
+                        "badgeClass": "badge-cleaned",
+                        "type": "cleaned",
+                        "cleaned": True,
+                    })
+                self.state.update_flow(rec_id, updates)
+
     def _handle_400(self, flow):
         """If our injected fields caused a 400, log which ones to remove."""
         try:
@@ -335,6 +412,7 @@ class GeminiRewriter:
             flow.response.content = "\n".join(cleaned).encode("utf-8")
             flow.response.headers["content-length"] = str(len(flow.response.content))
             self.stats["cleaned"] += 1
+            flow.metadata["ofspro_cleaned"] = True
 
     # ── UNLURE: map loopback addresses back to real targets ─────
 

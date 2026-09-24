@@ -190,10 +190,10 @@ def main():
                         help="Disable auto-retry on blocks")
     parser.add_argument("--max-retries", type=int, default=3,
                         help="Max retry attempts (default: 3)")
-    parser.add_argument("--verbose", "-v", action="store_true",
-                        help="Verbose logging")
-    parser.add_argument("--web", "-w", action="store_true",
-                        help="Enable mitmproxy web UI")
+    parser.add_argument("--web", "-w", action="store_true", default=True,
+                        help="Enable OFSPRO Web UI dashboard (default: True)")
+    parser.add_argument("--no-web", action="store_true",
+                        help="Disable OFSPRO Web UI dashboard")
     parser.add_argument("--web-port", type=int, default=8081,
                         help="Web UI port (default: 8081)")
     parser.add_argument("--transparent", "-t", action="store_true",
@@ -224,6 +224,8 @@ def main():
 
     print(f"   {_D}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{_N}")
     print()
+    web_enabled = not args.no_web
+
     print(f"   {_W}Level{_N}          {lc}{args.level} ({level_names[args.level]}){_N}")
     print(f"   {_W}Rewrite{_N}        {args.rewrite}")
     print(f"   {_W}Port{_N}           {_C}{args.port}{_N}")
@@ -232,7 +234,7 @@ def main():
     print(f"   {_W}Continuation{_N}   {on if not args.no_continuation else off}")
     print(f"   {_W}Cleaning{_N}       {on if not args.no_clean else off}")
     print(f"   {_W}Auto-retry{_N}     {on + f' ({_D}{args.max_retries} max{_N})' if not args.no_retry else off}")
-    print(f"   {_W}Web UI{_N}         {on + f' ({_D}:{args.web_port}{_N})' if args.web else off}")
+    print(f"   {_W}Web UI{_N}         {on + f' ({_C}http://127.0.0.1:{args.web_port}{_N})' if web_enabled else off}")
     print(f"   {_W}CA cert{_N}        {_D}{cert}{_N}")
 
     # Show localhost lure status
@@ -256,6 +258,11 @@ def main():
 
     print()
     print(f"   {_D}┌──────────────────────────────────────────────────────┐{_N}")
+    if web_enabled:
+        print(f"   {_D}│{_N}  {_C}Interactive Web UI Dashboard:{_N}                       {_D}│{_N}")
+        print(f"   {_D}│{_N}  {_W}http://127.0.0.1:{args.web_port:<36}{_N} {_D}│{_N}")
+        print(f"   {_D}│{_N}  {_D}Monitor · Level Selector · Lures · Prompt Tester{_N}      {_D}│{_N}")
+        print(f"   {_D}├──────────────────────────────────────────────────────┤{_N}")
     print(f"   {_D}│{_N}  {_W}Connect AGY:{_N}                                          {_D}│{_N}")
     print(f"   {_D}│{_N}                                                       {_D}│{_N}")
     print(f"   {_D}│{_N}  {_G}export{_N} HTTPS_PROXY=http://127.0.0.1:{_W}{args.port}{_N}            {_D}│{_N}")
@@ -277,6 +284,8 @@ def main():
     env["PROXY_INJECT_HISTORY"] = "0" if args.no_history else "1"
     env["PROXY_INJECT_CONTINUATION"] = "0" if args.no_continuation else "1"
     env["PROXY_REWRITE_MODE"] = args.rewrite
+    env["PROXY_WEB"] = "1" if web_enabled else "0"
+    env["PROXY_WEB_PORT"] = str(args.web_port)
     if args.target:
         env["PROXY_TARGETS"] = ",".join(args.target)
     if args.lure_auto:
@@ -287,7 +296,7 @@ def main():
     addon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                               "addons", "gemini_rewriter.py")
 
-    target_name = "mitmweb" if args.web else "mitmdump"
+    target_name = "mitmdump"
     binary = find_mitm_binary(target_name) or target_name
     cmd = [
         binary,
@@ -298,8 +307,6 @@ def main():
 
     if args.transparent:
         cmd.extend(["--mode", "transparent"])
-    if args.web:
-        cmd.extend(["--web-port", str(args.web_port)])
     if args.verbose:
         cmd.extend(["--set", "console_eventlog_verbosity=debug"])
 

@@ -67,6 +67,35 @@ class TargetMap:
         self._dom_rev[alias] = key
         return alias
 
+    def remove(self, target: str) -> bool:
+        target = target.strip()
+        host = target.split(":")[0]
+        if host in self._ip_fwd:
+            loopback = self._ip_fwd.pop(host)
+            self._ip_rev.pop(loopback, None)
+            return True
+        key = host.lower()
+        if key in self._dom_fwd:
+            alias = self._dom_fwd.pop(key)
+            self._dom_rev.pop(alias, None)
+            return True
+        if host in self._ip_rev:
+            real = self._ip_rev.pop(host)
+            self._ip_fwd.pop(real, None)
+            return True
+        if key in self._dom_rev:
+            real = self._dom_rev.pop(key)
+            self._dom_fwd.pop(real, None)
+            return True
+        return False
+
+    def clear(self):
+        self._ip_fwd.clear()
+        self._ip_rev.clear()
+        self._dom_fwd.clear()
+        self._dom_rev.clear()
+        self._next_octet = 1
+
     def _is_external_ip(self, ip_str: str) -> bool:
         try:
             ip = ipaddress.ip_address(ip_str)
