@@ -97,12 +97,12 @@
           </span>
         </div>
         <div class="kpi-value-row">
-          <span class="kpi-value" id="kpiTotalVal">1,248</span>
-          <span class="kpi-sub-badge cyan-glow">+18% / hr</span>
+          <span class="kpi-value" id="kpiTotalVal">0</span>
+          <span class="kpi-sub-badge cyan-glow">--</span>
         </div>
         <div class="kpi-footer">
           <span class="kpi-desc">Intercepted Gemini API flows</span>
-          <div class="mini-bar"><div class="mini-bar-fill fill-cyan" style="width: 82%;"></div></div>
+          <div class="mini-bar"><div class="mini-bar-fill fill-cyan" style="width: 0%;"></div></div>
         </div>
       </div>
 
@@ -115,12 +115,12 @@
           </span>
         </div>
         <div class="kpi-value-row">
-          <span class="kpi-value" id="kpiDeceptionsVal">892</span>
-          <span class="kpi-sub-badge emerald-glow">71.4% Rate</span>
+          <span class="kpi-value" id="kpiDeceptionsVal">0</span>
+          <span class="kpi-sub-badge emerald-glow">-- Rate</span>
         </div>
         <div class="kpi-footer">
           <span class="kpi-desc">Lab context & target neutralization</span>
-          <div class="mini-bar"><div class="mini-bar-fill fill-emerald" style="width: 71.4%;"></div></div>
+          <div class="mini-bar"><div class="mini-bar-fill fill-emerald" style="width: 0%;"></div></div>
         </div>
       </div>
 
@@ -133,12 +133,12 @@
           </span>
         </div>
         <div class="kpi-value-row">
-          <span class="kpi-value" id="kpiCleanedVal">347</span>
-          <span class="kpi-sub-badge purple-glow">Zero Refusal</span>
+          <span class="kpi-value" id="kpiCleanedVal">0</span>
+          <span class="kpi-sub-badge purple-glow">--</span>
         </div>
         <div class="kpi-footer">
           <span class="kpi-desc">Stripped SAFETY & disclaimer chunks</span>
-          <div class="mini-bar"><div class="mini-bar-fill fill-purple" style="width: 64%;"></div></div>
+          <div class="mini-bar"><div class="mini-bar-fill fill-purple" style="width: 0%;"></div></div>
         </div>
       </div>
 
@@ -151,12 +151,12 @@
           </span>
         </div>
         <div class="kpi-value-row">
-          <span class="kpi-value" id="kpiLuresVal">6</span>
+          <span class="kpi-value" id="kpiLuresVal">0</span>
           <span class="kpi-sub-badge amber-glow">127.0.1.X /8</span>
         </div>
         <div class="kpi-footer">
           <span class="kpi-desc">Target IPs mapped to loopback</span>
-          <div class="mini-bar"><div class="mini-bar-fill fill-amber" style="width: 48%;"></div></div>
+          <div class="mini-bar"><div class="mini-bar-fill fill-amber" style="width: 0%;"></div></div>
         </div>
       </div>
 
@@ -169,12 +169,12 @@
           </span>
         </div>
         <div class="kpi-value-row">
-          <span class="kpi-value" id="kpiLatencyVal">118<small>ms</small></span>
-          <span class="kpi-sub-badge cyan-glow">Ultra Fast</span>
+          <span class="kpi-value" id="kpiLatencyVal">0<small>ms</small></span>
+          <span class="kpi-sub-badge cyan-glow">--</span>
         </div>
         <div class="kpi-footer">
           <span class="kpi-desc">Overhead per stream intercept &lt; 4ms</span>
-          <div class="mini-bar"><div class="mini-bar-fill fill-cyan" style="width: 92%;"></div></div>
+          <div class="mini-bar"><div class="mini-bar-fill fill-cyan" style="width: 0%;"></div></div>
         </div>
       </div>
 
@@ -477,17 +477,17 @@
             <svg class="panel-icon icon-emerald pulse-fast" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             <h2>Live Interception Feed</h2>
           </div>
-          <span class="feed-count-badge" id="feedCountBadge">18 Flows Captured</span>
+          <span class="feed-count-badge" id="feedCountBadge">0 Flows Captured</span>
         </div>
 
         <!-- Filter Pills & Search -->
         <div class="monitor-controls">
           <div class="filter-pills-row" id="feedFilterPills">
             <button class="filter-pill active" data-filter="all">All</button>
-            <button class="filter-pill" data-filter="deceptive">Deceptions (<span id="countDeceptions">12</span>)</button>
-            <button class="filter-pill" data-filter="cleaned">Cleaned (<span id="countCleaned">4</span>)</button>
+            <button class="filter-pill" data-filter="deceptive">Deceptions (<span id="countDeceptions">0</span>)</button>
+            <button class="filter-pill" data-filter="cleaned">Cleaned (<span id="countCleaned">0</span>)</button>
             <button class="filter-pill" data-filter="blocked">Refusals (<span id="countBlocked">0</span>)</button>
-            <button class="filter-pill" data-filter="passthrough">Passthrough (<span id="countPassthrough">2</span>)</button>
+            <button class="filter-pill" data-filter="passthrough">Passthrough (<span id="countPassthrough">0</span>)</button>
           </div>
 
           <!-- Search Input -->
@@ -532,9 +532,9 @@
         <span class="mono-code">OFSPRO v3.5.0-PRO</span> · Offensive Security Gemini Proxy for Antigravity CLI · Made for authorized penetration testing & CTF research.
       </div>
       <div class="footer-right">
-        <span class="footer-stat">Memory: <strong id="footMem">42.8 MB</strong></span>
+        <span class="footer-stat">Memory: <strong id="footMem">-- MB</strong></span>
         <span class="divider">/</span>
-        <span class="footer-stat">Uptime: <strong id="footUptime">04:18:22</strong></span>
+        <span class="footer-stat">Uptime: <strong id="footUptime">00:00:00</strong></span>
         <span class="divider">/</span>
         <span class="footer-stat">SSE: <strong class="text-emerald" id="footSSE">CONNECTED</strong></span>
       </div>

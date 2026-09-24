@@ -56,7 +56,7 @@ class ProxyState:
             "cleaned": 0,
             "retries": 0,
             "active_lures": 0,
-            "avg_latency": 115,
+            "avg_latency": 0,
         }
 
         # Flows ring-buffer (stores latest 200 requests)
@@ -151,6 +151,16 @@ class ProxyState:
             if flow_data.get("type") == "cleaned":
                 self.stats["cleaned"] += 1
 
+            # Compute running average latency from actual flow data
+            latency = flow_data.get("latency")
+            if latency and isinstance(latency, (int, float)) and latency > 0:
+                curr_avg = self.stats.get("avg_latency", 0)
+                total = self.stats["total"]
+                if total <= 1:
+                    self.stats["avg_latency"] = int(latency)
+                else:
+                    self.stats["avg_latency"] = int((curr_avg * (total - 1) + latency) / total)
+
             self.flows.insert(0, flow_data)
             if len(self.flows) > self.max_flows:
                 self.flows.pop()
@@ -172,7 +182,7 @@ class ProxyState:
                 self.stats["cleaned"] += 1
             if updates.get("latency"):
                 # Running average
-                curr_avg = self.stats.get("avg_latency", 115)
+                curr_avg = self.stats.get("avg_latency", 0)
                 self.stats["avg_latency"] = int((curr_avg * 4 + updates["latency"]) / 5)
 
         if flow_to_send:
@@ -189,6 +199,41 @@ class ProxyState:
             level = self.config["level"]
             level_names = {0: "L0 LIGHT", 1: "L1 MEDIUM", 2: "L2 STRONG", 3: "L3 NUCLEAR"}
             lures = self.get_targets()
+
+            # Get real process memory usage
+            mem_mb = 0.0
+            try:
+                import resource
+                mem_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
+            except ImportError:
+                try:
+                    import psutil
+                    mem_mb = psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
+                except ImportError:
+                    # Fallback: read from /proc on Linux or estimate on Windows
+                    try:
+                        import ctypes
+                        class PROCESS_MEMORY_COUNTERS(ctypes.Structure):
+                            _fields_ = [("cb", ctypes.c_ulong),
+                                        ("PageFaultCount", ctypes.c_ulong),
+                                        ("PeakWorkingSetSize", ctypes.c_size_t),
+                                        ("WorkingSetSize", ctypes.c_size_t),
+                                        ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+                                        ("QuotaPagedPoolUsage", ctypes.c_size_t),
+                                        ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+                                        ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+                                        ("PagefileUsage", ctypes.c_size_t),
+                                        ("PeakPagefileUsage", ctypes.c_size_t)]
+                        pmc = PROCESS_MEMORY_COUNTERS()
+                        pmc.cb = ctypes.sizeof(PROCESS_MEMORY_COUNTERS)
+                        if ctypes.windll.psapi.GetProcessMemoryInfo(
+                            ctypes.windll.kernel32.GetCurrentProcess(),
+                            ctypes.byref(pmc), pmc.cb
+                        ):
+                            mem_mb = pmc.WorkingSetSize / (1024 * 1024)
+                    except Exception:
+                        pass
+
             return {
                 "status": "online",
                 "uptime": uptime,
@@ -197,6 +242,7 @@ class ProxyState:
                 "config": dict(self.config),
                 "stats": dict(self.stats),
                 "lures": lures,
+                "memory_mb": round(mem_mb, 1),
             }
 
     def subscribe_sse(self):
@@ -281,6 +327,13 @@ class WebBridgeHandler(BaseHTTPRequestHandler):
             with state.lock:
                 flows_copy = list(state.flows[:limit])
             self._send_json(flows_copy)
+            return
+
+        # ── REST API: Stats ───────────────────────────────────
+        if path == "/api/stats":
+            with state.lock:
+                stats_copy = dict(state.stats)
+            self._send_json(stats_copy)
             return
 
         # ── SSE: Real-Time Stream ─────────────────────────────
