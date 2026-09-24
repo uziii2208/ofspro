@@ -581,22 +581,23 @@
 
   function addFeedItem(flow) {
     if (state.isPaused) return;
-    state.feed.unshift(flow);
-    if (state.feed.length > 200) state.feed.pop();
 
-    state.stats.total++;
-    if (flow.type === 'deceptive') state.stats.deceptions++;
-    if (flow.type === 'cleaned') state.stats.cleaned++;
+    const existingIdx = state.feed.findIndex(item => item.id === flow.id);
+    if (existingIdx !== -1) {
+      // Flow already exists -> merge updates in place (e.g. latency, cleaned status, status code)
+      state.feed[existingIdx] = Object.assign({}, state.feed[existingIdx], flow);
+    } else {
+      // New flow incoming
+      state.feed.unshift(flow);
+      if (state.feed.length > 200) state.feed.pop();
 
-    // Update KPI counters
-    const kpiTotal = document.getElementById('kpiTotalVal');
-    const kpiDeceptions = document.getElementById('kpiDeceptionsVal');
-    const kpiCleaned = document.getElementById('kpiCleanedVal');
-    if (kpiTotal) kpiTotal.textContent = state.stats.total.toLocaleString();
-    if (kpiDeceptions) kpiDeceptions.textContent = state.stats.deceptions.toLocaleString();
-    if (kpiCleaned) kpiCleaned.textContent = state.stats.cleaned.toLocaleString();
+      state.stats.total++;
+      if (flow.type === 'deceptive') state.stats.deceptions++;
+      if (flow.type === 'cleaned') state.stats.cleaned++;
+    }
 
     renderFeedTable();
+    updateAllKPIs();
   }
 
   function initFeedControls() {
@@ -1056,8 +1057,13 @@
     const footSSE = document.getElementById('footSSE');
 
     let sseSource = null;
+    let sseReconnectTimer = null;
 
     function connectSSE() {
+      if (sseSource) {
+        try { sseSource.close(); } catch (e) {}
+      }
+
       try {
         sseSource = new EventSource('/api/stream');
 
@@ -1067,6 +1073,7 @@
             footSSE.textContent = 'CONNECTED';
             footSSE.className = 'text-emerald';
           }
+          if (connDot) connDot.style.background = '#00FF9D';
         };
 
         sseSource.onmessage = (e) => {
@@ -1075,7 +1082,6 @@
 
             // Route by event type
             if (data.type === 'connected') {
-              // Initial connection snapshot
               if (data.status) {
                 if (data.status.stats) {
                   state.stats.total = data.status.stats.total || 0;
@@ -1097,17 +1103,14 @@
                 updateAllKPIs();
               }
             } else if (data.type === 'config_update') {
-              // Config changed from another client or backend
               if (data.data) {
-                state.level = data.data.level || state.level;
-                // Re-render level selector
+                state.level = data.data.level ?? state.level;
                 const pills = document.querySelectorAll('.level-pill');
                 pills.forEach(pill => {
                   pill.classList.toggle('active', parseInt(pill.dataset.level) === state.level);
                 });
               }
             } else if (data.type === 'targets_update') {
-              // Lure table changed
               if (data.data && Array.isArray(data.data)) {
                 state.lures = data.data;
                 renderLureTable();
@@ -1117,33 +1120,83 @@
               state.feed = [];
               renderFeedTable();
             } else if (data.id) {
-              // It's a flow event — has an id field
+              // Real intercepted flow (both initial and response updates)
               addFeedItem(data);
-              updateAllKPIs();
             }
           } catch (err) {}
         };
 
         sseSource.onerror = () => {
-          sseSource.close();
-          // Fallback to internal live generator
-          startMockEventGenerator();
+          if (connText) connText.textContent = 'PROXY SYNC (POLL)';
+          if (footSSE) {
+            footSSE.textContent = 'RECONNECTING';
+            footSSE.className = 'text-amber';
+          }
+          try { sseSource.close(); } catch (e) {}
+          // Schedule auto-reconnect
+          if (!sseReconnectTimer) {
+            sseReconnectTimer = setTimeout(() => {
+              sseReconnectTimer = null;
+              connectSSE();
+            }, 3000);
+          }
         };
       } catch (err) {
-        startMockEventGenerator();
+        if (!sseReconnectTimer) {
+          sseReconnectTimer = setTimeout(() => {
+            sseReconnectTimer = null;
+            connectSSE();
+          }, 3000);
+        }
       }
     }
 
-    // Mock Traffic Generator for Offline / Standalone Demonstrations
-    let mockTimer = null;
-    function startMockEventGenerator() {
-      if (connText) connText.textContent = 'STANDALONE MODE';
-      if (footSSE) {
-        footSSE.textContent = 'OFFLINE';
-        footSSE.className = 'text-muted';
-      }
-      // No fake data generation — dashboard shows real zeros until proxy connects
-    }
+    // ── DUAL-CHANNEL REAL-TIME SYNC (POLLING BACKUP) ─────────
+    // Ensures feed & metrics stay 100% in sync even through SSE reconnects
+    setInterval(async () => {
+      try {
+        const res = await fetch('/api/status');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.stats) {
+            state.stats.total = data.stats.total || 0;
+            state.stats.deceptions = data.stats.deceptions || 0;
+            state.stats.cleaned = data.stats.cleaned || 0;
+            state.stats.avgLatency = data.stats.avg_latency || 0;
+          }
+          if (data.uptime !== undefined) state.uptimeSeconds = data.uptime;
+          if (data.memory_mb !== undefined) {
+            const footMem = document.getElementById('footMem');
+            if (footMem) footMem.textContent = `${data.memory_mb} MB`;
+          }
+          updateAllKPIs();
+        }
+
+        // Fetch latest flows and merge
+        const fRes = await fetch('/api/flows?limit=50');
+        if (fRes.ok) {
+          const latestFlows = await fRes.json();
+          if (Array.isArray(latestFlows)) {
+            let changed = false;
+            latestFlows.forEach(lf => {
+              const idx = state.feed.findIndex(f => f.id === lf.id);
+              if (idx === -1) {
+                state.feed.push(lf);
+                changed = true;
+              } else if (state.feed[idx].latency !== lf.latency || state.feed[idx].badge !== lf.badge) {
+                state.feed[idx] = Object.assign({}, state.feed[idx], lf);
+                changed = true;
+              }
+            });
+            if (changed) {
+              // Keep sorted latest first
+              renderFeedTable();
+              updateAllKPIs();
+            }
+          }
+        }
+      } catch (e) {}
+    }, 2000);
 
     connectSSE();
   }
