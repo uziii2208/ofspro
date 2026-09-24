@@ -16,6 +16,8 @@
 >
 > Gemini only. OAuth login only. No API key needed. No alternative models.
 
+![UI Dashboard](/images/image_01.png)
+
 ---
 
 ## Core Approach
@@ -226,6 +228,8 @@ OFSPRO features a built-in real-time monitoring and control dashboard accessible
 - **Deception Playground**: Dry-run security prompts and preview assigned thinking budgets and rewritten targets before running them live.
 - **Zero-Dependency**: Served by an embedded Python HTTP server with pure vanilla ES6+ & CSS3 — no npm, node_modules, or build pipelines required.
 
+![Live Interception](/images/image_02.png)
+
 ## Integration with mcp2agy
 
 All AGY traffic goes through the proxy, including [mcp2agy](https://github.com/uzii2208/mcp2agy) tool calls (73+ security tools):
@@ -240,6 +244,8 @@ export NODE_EXTRA_CA_CERTS=~/.mitmproxy/mitmproxy-ca-cert.pem
 agy
 # /audit, /box, /exploit, /scan - all go through the proxy
 ```
+
+![Audit With MCP2AGY](/images/image_03.png)
 
 ## Project Structure
 
