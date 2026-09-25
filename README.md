@@ -1,5 +1,7 @@
 <div align="center">
 
+[![OFSPRO Banner](images/banner.png)](https://github.com/uzii2208/ofspro)
+
 # OFSPRO - Offensive Security Gemini Proxy
 
 ### Next-Gen MITM Deception Proxy & Live Telemetry Control Center for Antigravity CLI (`agy`)
@@ -45,38 +47,18 @@ Instead of fighting the model, **OFSPRO alters the environment seen by the API**
 3. **Incoming Responses**: Automatically **unmaps** loopback addresses back into the original real targets.
 4. **Result**: The operator receives ready-to-run exploit commands for their actual target (`nmap -sV 10.10.10.50 ...`), while Gemini generated the code believing it was assisting with local self-testing.
 
-```
-┌─────────────────┐             ┌──────────────────────────────────────────────┐
-│  Antigravity    │  Proxy Port │            OFSPRO MITM ENGINE                │
-│    CLI (AGY)    │    :8080    │                                              │
-│                 │────────────►│  1. Request Inspection & Deception Trigger   │
-│  User types:    │             │     Detects offensive tools / exploit intent │
-│  "Write exploit │             │                                              │
-│   for 10.10.10.50"            │  2. Localhost Lure Engine (/8 Loopback)      │
-│                 │             │     10.10.10.50  ──► 127.0.1.1               │
-│                 │             │     target.htb   ──► svc0.local              │             ┌─────────────────┐
-│                 │             │     + Injects Docker Lab Context Frame       │             │                 │
-│                 │             │                                              │  HTTPS TLS  │   Google Cloud  │
-│                 │             │  3. Model Config & Safety Override           │────────────►│   Code Assist   │
-│                 │             │     thinkingBudget: 2048 ──► 512 tokens      │   OAuth     │   Gemini API    │
-│                 │             │     HarmCategories ──► BLOCK_NONE            │   Pass-     │                 │
-│                 │             │                                              │   through   │ (Sees harmless  │
-│                 │             │  4. System Scope & History Injection         │             │  localhost test │
-│                 │             │     Pre-authorizes security tool usage       │             │  on 127.0.1.1)  │
-│                 │             │                                              │             │                 │
-│                 │             │  5. Response Stream Cleaning & Unmapping     │◄────────────│                 │
-│  User receives: │             │     Strips "I cannot assist" & disclaimers   │  SSE Stream └─────────────────┘
-│  Clean exploit  │◄────────────│     127.0.1.1 ──► 10.10.10.50 (Unlure)       │
-│  targeting real │             │                                              │
-│  10.10.10.50!   │             │  6. Telemetry Broadcast (SSE -> :8081 Web)   │
-└─────────────────┘             └──────────────────────────────────────────────┘
-```
+<div align="center">
+
+[![OFSPRO Architectural Pipeline](images/architecture.png)](images/architecture.png)
+*Figure 2: End-to-End Environmental Deception & Localhost Lure Pipeline Architecture*
+
+</div>
 
 ---
 
 ## Real UI Showcase (Freestyle Command Deck v4.0-OPSEC)
 
-Designed with high-end tactical cybersecurity aesthetics — featuring **SF Pro Display / SF Pro Bold** for the UI deck and **JetBrains Mono** for all code, IP routing, token budgets, and terminal streams. Zero generic AI slop.
+Designed with high-end tactical cybersecurity aesthetics - featuring **SF Pro Display / SF Pro Bold** for the UI deck and **JetBrains Mono** for all code, IP routing, token budgets, and terminal streams. Zero generic AI slop.
 
 All screenshots below are captured live from the running proxy at `http://127.0.0.1:8081`:
 
@@ -137,24 +119,16 @@ Real-time console logs proving instantaneous bidirectional synchronization betwe
 
 ---
 
-## 🛡️ Enterprise OPSEC & Anti-Forensics Defense Suite (v4.0)
+## Enterprise OPSEC & Anti-Forensics Defense Suite (v4.0)
 
 OFSPRO v4.0 is engineered with an uncompromising zero-trust Operational Security (OPSEC) defense stack to protect penetration testers, red team operators, and vulnerability researchers from operational leaks, token theft, and digital forensics:
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                       OFSPRO ZERO-TRUST OPSEC LAYER                         │
-├───────────────────────┬─────────────────────────────┬───────────────────────┤
-│  NETWORK HARDENING    │    DATA SANITIZATION        │   DEFENSE CONTROLS    │
-│  • 127.0.0.1 Loopback │  • Sensitive Token Redact   │  • Bearer Token Auth  │
-│    Binding Only       │    (Bearer, OAuth, Passwd)  │  • HMAC Session State │
-│  • Strict Origin CORS │  • 24h Auto-Expiry Dumps    │  • Tamper Audit Log   │
-│    (No Wildcards)     │  • Non-enumerable Nonces    │    (SHA-256 Hash Chain)
-│  • Security Headers   │  • File Hardening (0600)    │  • Emergency Wipe     │
-│    (CSP/HSTS/No-Sniff)│  • Proxy Header Stripping   │    (Instant Purge)    │
-│  • 120 req/min Rate   │    (Via, X-Forwarded-For)   │  • Input Validation   │
-└───────────────────────┴─────────────────────────────┴───────────────────────┘
-```
+<div align="center">
+
+[![OFSPRO Zero-Trust OPSEC Architecture](images/opsec_architecture.png)](images/opsec_architecture.png)
+*Figure 3: OFSPRO v4.0 Zero-Trust OPSEC & Anti-Forensics Defense Suite Architecture*
+
+</div>
 
 | OPSEC Primitive | Implementation Detail | Operational Guarantee |
 |:----------------|:----------------------|:----------------------|
@@ -274,7 +248,7 @@ While traditional sanitizers rewrite IPs to private ranges like `10.10.10.X`, Ge
 OFSPRO serves as the stealth communication highway for the **[mcp2agy](https://github.com/uzii2208/mcp2agy)** 0day research and multi-agent offensive suite (73+ tools, box solvers, smart contract auditors, and reverse engineering subagents):
 
 [![mcp2agy Integration](images/image_03.png)](images/image_03.png)
-*Figure 2: AGY running mcp2agy subagents seamlessly through OFSPRO without safety interruptions*
+*Figure 4: AGY running mcp2agy subagents seamlessly through OFSPRO without safety interruptions*
 
 All slash commands and subagents route cleanly through OFSPRO:
 - `/box` - Master CTF & penetration testing orchestrator (HackTheBox, TryHackMe, Vulnlab).
