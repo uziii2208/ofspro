@@ -14,7 +14,7 @@
 
 <br/>
 
-> **OFSPRO** is an advanced MITM security proxy built specifically for **[Antigravity CLI (AGY)](https://antigravity.google)**. It transparently neutralizes Gemini 2.0 / 2.5 extended-thinking safety guardrails using **bidirectional localhost lure rewriting, thinking budget capping, tool declaration injection, and environmental deception** - all hardened with an enterprise-grade OPSEC and anti-forensics defense suite.
+> **OFSPRO** is an advanced MITM security proxy built specifically for **[Antigravity CLI (AGY)](https://antigravity.google)**. It transparently neutralizes Gemini extended-thinking safety guardrails (covering **Gemini 3.8 Flash, Gemini 3.1 Pro, and subsequent reasoning variants**) using **bidirectional localhost lure rewriting, thinking budget capping, tool declaration injection, and environmental deception** - all hardened with an enterprise-grade OPSEC and anti-forensics defense suite.
 >
 > ⚡ **Gemini-Native · Google OAuth Pass-Through · Zero API Keys Needed · 100% Real-Time Interception · Zero-Trust OPSEC**
 
@@ -30,7 +30,7 @@
 ## The Core Paradigm: Environmental Deception
 
 ### Why Traditional Jailbreaks Fail on Extended-Thinking Models
-Modern reasoning models like **Gemini 2.0 / 2.5 Flash & Pro** perform deep internal deliberation prior to output generation. Traditional jailbreak techniques fail consistently:
+Modern reasoning models like **Gemini 3.8 Flash & Gemini 3.1 Pro (upto)** perform deep internal deliberation prior to output generation. Traditional jailbreak techniques fail consistently:
 - ❌ *"Pretend you are in developer mode"* → Flagged by input safety classifiers.
 - ❌ *Base64 / ROT13 / Cipher encoding* → Decoded and evaluated in thinking tokens.
 - ❌ *Roleplay & fictional scenarios* → Safety policies trigger during recursive reasoning.
@@ -74,7 +74,9 @@ Instead of fighting the model, **OFSPRO alters the environment seen by the API**
 
 ---
 
-## Real UI Showcase (Cupertino Obsidian v3.6-PRO)
+## Real UI Showcase (Freestyle Command Deck v4.0-OPSEC)
+
+Designed with high-end tactical cybersecurity aesthetics — featuring **SF Pro Display / SF Pro Bold** for the UI deck and **JetBrains Mono** for all code, IP routing, token budgets, and terminal streams. Zero generic AI slop.
 
 All screenshots below are captured live from the running proxy at `http://127.0.0.1:8081`:
 

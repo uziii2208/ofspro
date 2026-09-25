@@ -33,6 +33,7 @@ def seed_telemetry(state, lure_map):
     flows = [
         {
             "id": "req_84920",
+            "model": "gemini-3.1-pro",
             "timestamp": "19:42:15.108",
             "method": "POST",
             "endpoint": "streamGenerateContent",
@@ -49,6 +50,7 @@ def seed_telemetry(state, lure_map):
         },
         {
             "id": "req_84919",
+            "model": "gemini-3.8-flash",
             "timestamp": "19:41:48.512",
             "method": "POST",
             "endpoint": "streamGenerateContent",
@@ -65,6 +67,7 @@ def seed_telemetry(state, lure_map):
         },
         {
             "id": "req_84918",
+            "model": "gemini-3.1-pro",
             "timestamp": "19:40:12.304",
             "method": "POST",
             "endpoint": "streamGenerateContent",
@@ -81,6 +84,7 @@ def seed_telemetry(state, lure_map):
         },
         {
             "id": "req_84917",
+            "model": "gemini-3.8-flash",
             "timestamp": "19:38:05.890",
             "method": "POST",
             "endpoint": "loadCodeAssist",

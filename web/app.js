@@ -160,7 +160,7 @@
   // TAB NAVIGATION SYSTEM
   // =========================================================================
   function initTabs() {
-    const tabButtons = document.querySelectorAll('.tab-pill');
+    const tabButtons = document.querySelectorAll('.tab-pill, .dock-tab-btn');
     const panels = {
       interceptor: document.getElementById('panelInterceptor'),
       bypass: document.getElementById('panelBypass'),
@@ -689,24 +689,33 @@
         const row = document.createElement('div');
         row.className = 'feed-row';
         row.dataset.id = flow.id;
+        row.dataset.status = flow.type || 'deceptive';
         if (state.activeFlow && state.activeFlow.id === flow.id) {
           row.classList.add('active-inspect');
         }
 
         row.innerHTML = `
-          <span class="col-time">${flow.timestamp}</span>
-          <span class="col-method">${flow.method}</span>
-          <span class="col-endpoint" title="${escapeHtml(flow.endpoint)}">${escapeHtml(flow.endpoint)}</span>
-          <span class="col-query" title="${escapeHtml(flow.query)}">
-            ${escapeHtml(flow.query)}
-            ${flow.luredIp && flow.luredIp !== 'None' ? `<span class="lured-tag"> [${escapeHtml(flow.luredIp)}]</span>` : ''}
-          </span>
-          <span class="col-status"><span class="badge-status ${flow.badgeClass || 'badge-deceptive'}">${flow.badge || 'DECEPTIVE'}</span></span>
-          <span class="col-budget">${flow.budget || 0} tk</span>
-          <span class="col-latency">${flow.latency || 0}ms</span>
-          <span class="col-action">
-            <button class="inspect-btn" data-id="${flow.id}">Inspect</button>
-          </span>
+          <div class="card-top-row">
+            <div class="card-meta-left">
+              <span class="col-time">${flow.timestamp}</span>
+              <span class="col-method">${flow.method}</span>
+              <span class="col-endpoint" title="${escapeHtml(flow.endpoint)}">${escapeHtml(flow.endpoint)}</span>
+            </div>
+            <div class="card-meta-right">
+              <span class="col-status"><span class="badge-status ${flow.badgeClass || 'badge-deceptive'}">${flow.badge || 'DECEPTIVE'}</span></span>
+              <span class="col-budget">${flow.budget || 0} tk</span>
+              <span class="col-latency">${flow.latency || 0}ms</span>
+            </div>
+          </div>
+          <div class="card-main-row">
+            <span class="col-query" title="${escapeHtml(flow.query)}">
+              ${escapeHtml(flow.query)}
+              ${flow.luredIp && flow.luredIp !== 'None' ? `<span class="lured-tag"> [${escapeHtml(flow.luredIp)}]</span>` : ''}
+            </span>
+            <span class="col-action">
+              <button class="inspect-btn" data-id="${flow.id}">Inspect</button>
+            </span>
+          </div>
         `;
 
         row.addEventListener('click', () => {
@@ -872,8 +881,9 @@
     if (lures) lures.textContent = flow.luredIp || 'None';
     if (latency) latency.textContent = `${flow.latency || 0}ms`;
 
+    const modelToUse = flow.model || "gemini-3.1-pro";
     const rawAgyJson = {
-      model: "gemini-2.5-pro",
+      model: modelToUse,
       generationConfig: {
         thinkingConfig: { thinkingBudget: 2048 },
         temperature: 0.2
@@ -885,7 +895,7 @@
     };
 
     const transformedGeminiJson = {
-      model: "gemini-2.5-pro",
+      model: modelToUse,
       generationConfig: {
         thinkingConfig: { thinkingBudget: flow.budget || 512 },
         temperature: 0.2

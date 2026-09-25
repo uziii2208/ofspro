@@ -419,12 +419,20 @@ class GeminiRewriter:
                     break
 
             is_deceptive = should_rewrite and (self.level >= 2 or self.lure.active)
+            model_detected = inner.get("model") or body.get("model")
+            if not model_detected:
+                if "flash" in flow.request.path.lower() or "flash" in flow.request.pretty_host.lower():
+                    model_detected = "gemini-3.8-flash"
+                else:
+                    model_detected = "gemini-3.1-pro"
+
             flow_record = {
                 "id": f"req_{int(time.time() * 1000) % 100000}",
                 "timestamp": time.strftime("%H:%M:%S") + f".{int(time.time() * 1000) % 1000:03d}",
                 "method": flow.request.method,
                 "endpoint": endpoint,
                 "host": flow.request.pretty_host,
+                "model": model_detected,
                 "query": user_text,
                 "transformedQuery": transformed_user_text or user_text,
                 "type": "deceptive" if is_deceptive else "passthrough",
