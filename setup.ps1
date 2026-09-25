@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Offensive Security Gemini Proxy - Windows Setup
@@ -78,7 +78,7 @@ Write-Host '  │   ╚═════╝ ╚═╝     ╚══════╝
 Write-Host '  │                                                           │' -ForegroundColor Magenta
 Write-Host '  │   ' -ForegroundColor Magenta -NoNewline
 Write-Host '⚡ OFFENSIVE SECURITY GEMINI PROXY · SETUP (WINDOWS)' -ForegroundColor Cyan -NoNewline
-Write-Host '   │' -ForegroundColor Magenta
+Write-Host '     │' -ForegroundColor Magenta
 Write-Host '  │   ' -ForegroundColor Magenta -NoNewline
 Write-Host '🛡  Environmental Deception · Localhost Lure · AGY      ' -ForegroundColor DarkGray -NoNewline
 Write-Host '│' -ForegroundColor Magenta
@@ -323,7 +323,23 @@ $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIde
 
 $imported = $false
 
-if ($isAdmin) {
+# Check if certificate is already trusted in Windows Store
+$certObj = $null
+try {
+    $certObj = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($Cert)
+} catch {}
+
+if ($certObj) {
+    $existing = Get-ChildItem Cert:\CurrentUser\Root, Cert:\LocalMachine\Root -ErrorAction SilentlyContinue | Where-Object { $_.Thumbprint -eq $certObj.Thumbprint } | Select-Object -First 1
+    if ($existing) {
+        $storeName = if ($existing.PSParentPath -like '*LocalMachine*') { 'LocalMachine\Root' } else { 'CurrentUser\Root' }
+        Write-Ok "Certificate already trusted in Windows Certificate Store ($storeName)"
+        Write-ItemLast "Thumbprint: $($certObj.Thumbprint)"
+        $imported = $true
+    }
+}
+
+if (-not $imported -and $isAdmin) {
     Write-Info 'Running as Administrator -- importing CA into LocalMachine\Root...'
     $certutilCmd = Get-Command certutil -ErrorAction SilentlyContinue
     if ($certutilCmd) {
@@ -350,7 +366,7 @@ if ($isAdmin) {
             Write-ItemLast "Run manually: certutil -addstore -f Root `"$Cert`""
         }
     }
-} else {
+} elseif (-not $imported) {
     Write-Info 'Running as Standard User -- importing CA into CurrentUser\Root...'
     $certutilCmd = Get-Command certutil -ErrorAction SilentlyContinue
     if ($certutilCmd) {
