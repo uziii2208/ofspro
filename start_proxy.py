@@ -210,6 +210,15 @@ def main():
                         help="Don't map loopback back to real targets in responses")
     parser.add_argument("--verbose", "-v", action="store_true",
                         help="Enable verbose / debug output")
+    # OPSEC Hardening options
+    parser.add_argument("--api-token", metavar="TOKEN",
+                        help="Set API token for Web UI authentication (auto-generated if not set)")
+    parser.add_argument("--rate-limit", type=int, default=120,
+                        help="API rate limit per IP per minute (default: 120)")
+    parser.add_argument("--bind-host", default="127.0.0.1",
+                        help="Web UI bind address (default: 127.0.0.1, use 0.0.0.0 for LAN access)")
+    parser.add_argument("--dump-max-age", type=int, default=24,
+                        help="Auto-delete dump files older than N hours (default: 24)")
 
     args = parser.parse_args()
     check_deps()
@@ -238,6 +247,22 @@ def main():
     print(f"   {_W}Auto-retry{_N}     {on + f' ({_D}{args.max_retries} max{_N})' if not args.no_retry else off}")
     print(f"   {_W}Web UI{_N}         {on + f' ({_C}http://127.0.0.1:{args.web_port}{_N})' if web_enabled else off}")
     print(f"   {_W}CA cert{_N}        {_D}{cert}{_N}")
+
+    # OPSEC Hardening status
+    print()
+    print(f"   {_D}┌──────────────────────────────────────────────────────┐{_N}")
+    print(f"   {_D}│{_N}  {_G}🛡️  OPSEC HARDENING{_N}                                   {_D}│{_N}")
+    print(f"   {_D}├──────────────────────────────────────────────────────┤{_N}")
+    print(f"   {_D}│{_N}  {_W}Auth{_N}           {on}  (Bearer token required)             {_D}│{_N}")
+    print(f"   {_D}│{_N}  {_W}Rate Limit{_N}     {_C}{args.rate_limit}/min/IP{_N}                          {_D}│{_N}")
+    print(f"   {_D}│{_N}  {_W}Bind{_N}           {_C}{args.bind_host}{_N}                            {_D}│{_N}")
+    print(f"   {_D}│{_N}  {_W}Security Hdr{_N}   {on}  (CSP, HSTS, X-Frame-Options)       {_D}│{_N}")
+    print(f"   {_D}│{_N}  {_W}Dump Expiry{_N}    {_C}{args.dump_max_age}h{_N} auto-cleanup                   {_D}│{_N}")
+    print(f"   {_D}│{_N}  {_W}Audit Log{_N}      {on}  (tamper-evident hash chain)        {_D}│{_N}")
+    if not args.api_token:
+        print(f"   {_D}│{_N}                                                       {_D}│{_N}")
+        print(f"   {_D}│{_N}  {_Y}⚠ Auto-generated API token (printed below){_N}          {_D}│{_N}")
+    print(f"   {_D}└──────────────────────────────────────────────────────┘{_N}")
 
     # Show localhost lure status
     if args.target or args.lure_auto:
@@ -294,6 +319,11 @@ def main():
         env["PROXY_LURE_AUTO"] = "1"
     if args.no_unmap:
         env["PROXY_UNMAP"] = "0"
+    if args.api_token:
+        env["OFSPRO_API_TOKEN"] = args.api_token
+    env["OFSPRO_RATE_LIMIT"] = str(args.rate_limit)
+    env["OFSPRO_DUMP_MAX_AGE_HOURS"] = str(args.dump_max_age)
+    env["OFSPRO_BIND_HOST"] = args.bind_host
 
     addon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                               "addons", "gemini_rewriter.py")
@@ -316,6 +346,15 @@ def main():
     if binary != target_name and args.verbose:
         print(f"   {_D}[*] Binary resolved to: {binary}{_N}")
     print(f"   {_D}[*] Ctrl+C to stop{_N}\n")
+
+    # Print auto-generated API token if needed
+    if not args.api_token:
+        from addons.opsec import get_auth
+        auth = get_auth()
+        if auth.is_auto_generated:
+            print(f"   {_Y}🔑 API Token:{_N} {_W}{auth.token}{_N}")
+            print(f"   {_D}   Set OFSPRO_API_TOKEN env var to use a fixed token{_N}")
+            print()
 
     try:
         proc = subprocess.run(cmd, env=env, cwd=os.path.dirname(os.path.abspath(__file__)))

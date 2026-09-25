@@ -181,6 +181,10 @@ else
     cp "$CERT" "$COMBINED"
     ok "Created standalone bundle (mitmproxy CA only)"
 fi
+# OPSEC Hardening: Restrict certificate permissions (owner-only access)
+chmod 600 "$COMBINED" "$CERT" 2>/dev/null || true
+chmod 700 "$CERT_DIR" 2>/dev/null || true
+ok "Hardened CA certificate permissions (chmod 600/700)"
 item_last "Output bundle: ${W}${COMBINED}${N}"
 step_footer
 

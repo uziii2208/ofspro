@@ -67,6 +67,18 @@
 
       <!-- Nav Actions -->
       <div class="nav-right">
+        <!-- OPSEC Status Badge -->
+        <div class="nav-opsec-badge" id="opsecBadge" title="OPSEC Hardened: Loopback 127.0.0.1, Token/Session Auth, Redacted Dumps, Chained Audit">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>OPSEC SECURE</span>
+        </div>
+
+        <!-- Emergency Wipe Button -->
+        <button class="nav-btn danger-btn btn-sm" id="emergencyWipeBtn" title="Emergency Wipe: Instantly purge all dump files and sensitive traces from disk" aria-label="Emergency Wipe">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span class="btn-text">Emergency Wipe</span>
+        </button>
+
         <!-- Audio Haptic Feedback -->
         <button class="nav-btn icon-btn" id="audioToggleBtn" title="Toggle Sound Feedback (Cyber Audio)" aria-label="Audio Feedback">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
@@ -610,6 +622,22 @@
               <div class="health-spec-row">
                 <span class="spec-name">Active Listen Port:</span>
                 <strong class="spec-value text-amber">8080 (Proxy) / 8081 (Web)</strong>
+              </div>
+              <div class="health-spec-row">
+                <span class="spec-name">OPSEC Network Binding:</span>
+                <strong class="spec-value text-emerald">127.0.0.1 (Loopback Isolated)</strong>
+              </div>
+              <div class="health-spec-row">
+                <span class="spec-name">API Authentication:</span>
+                <strong class="spec-value text-cyan">HMAC Session / Bearer Token</strong>
+              </div>
+              <div class="health-spec-row">
+                <span class="spec-name">Dump Sanitization:</span>
+                <strong class="spec-value text-emerald">Active (Tokens Redacted · 24h Expiry)</strong>
+              </div>
+              <div class="health-spec-row">
+                <span class="spec-name">Tamper Audit Log:</span>
+                <strong class="spec-value mono-code text-cyan">SHA-256 Hash Chain</strong>
               </div>
             </div>
 

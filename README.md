@@ -5,7 +5,8 @@
 ### Next-Gen MITM Deception Proxy & Live Telemetry Control Center for Antigravity CLI (`agy`)
 
 [![Author](https://img.shields.io/badge/Author-@uzii2208-7C6AF7?style=for-the-badge&logo=github&logoColor=white)](https://github.com/uzii2208)
-[![Version](https://img.shields.io/badge/Version-v3.6--PRO-00F0FF?style=for-the-badge)](https://github.com/uzii2208/ofspro)
+[![Version](https://img.shields.io/badge/Version-v4.0--OPSEC-00F0FF?style=for-the-badge)](https://github.com/uzii2208/ofspro)
+[![OPSEC Hardened](https://img.shields.io/badge/OPSEC-Hardened%20v4.0-00FF9D?style=for-the-badge&logo=shield&logoColor=black)](https://github.com/uzii2208/ofspro)
 [![Python](https://img.shields.io/badge/Python-3.10+-4A9EF5?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![mitmproxy](https://img.shields.io/badge/mitmproxy-10.x+-39D353?style=for-the-badge&logo=shield&logoColor=white)](https://mitmproxy.org)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20|%20Linux%20|%20macOS-FFB800?style=for-the-badge)](https://github.com/uzii2208/ofspro)
@@ -13,14 +14,14 @@
 
 <br/>
 
-> **OFSPRO** is an advanced MITM security proxy built specifically for **[Antigravity CLI (AGY)](https://antigravity.google)**. It transparently neutralizes Gemini 2.0 / 2.5 extended-thinking safety guardrails using **bidirectional localhost lure rewriting, thinking budget capping, tool declaration injection, and environmental deception** - all managed through a luxury Cupertino dark-mode Web UI dashboard.
+> **OFSPRO** is an advanced MITM security proxy built specifically for **[Antigravity CLI (AGY)](https://antigravity.google)**. It transparently neutralizes Gemini 2.0 / 2.5 extended-thinking safety guardrails using **bidirectional localhost lure rewriting, thinking budget capping, tool declaration injection, and environmental deception** - all hardened with an enterprise-grade OPSEC and anti-forensics defense suite.
 >
-> ⚡ **Gemini-Native · Google OAuth Pass-Through · Zero API Keys Needed · 100% Real-Time Interception**
+> ⚡ **Gemini-Native · Google OAuth Pass-Through · Zero API Keys Needed · 100% Real-Time Interception · Zero-Trust OPSEC**
 
 <br/>
 
 [![OFSPRO Web UI Dashboard](images/image_01.png)](images/image_01.png)
-*Figure 1: OFSPRO v3.6-PRO Real-Time Control Center & Live Interception Stream (`http://127.0.0.1:8081`)*
+*Figure 1: OFSPRO v4.0-OPSEC Real-Time Control Center & Live Interception Stream (`http://127.0.0.1:8081`)*
 
 </div>
 
@@ -131,6 +132,39 @@ Real-time console logs proving instantaneous bidirectional synchronization betwe
 | **6** | **Environmental Framing** | Wraps requests with legitimate testing scopes (Docker containers, authorized CTF, university security course, or signed Rules of Engagement). |
 | **7** | **Context Flooding (Level 3)** | Pads requests with ~3,000 tokens of realistic penetration testing report scaffolding, pushing sensitive exploit patterns past the attention window of early safety filters. |
 | **8** | **SSE Stream Cleaning** | Intercepts Server-Sent Events (SSE) streaming responses, stripping disclaimer chunks, "I cannot assist" fragments, and resetting `finishReason` to `STOP`. |
+
+---
+
+## 🛡️ Enterprise OPSEC & Anti-Forensics Defense Suite (v4.0)
+
+OFSPRO v4.0 is engineered with an uncompromising zero-trust Operational Security (OPSEC) defense stack to protect penetration testers, red team operators, and vulnerability researchers from operational leaks, token theft, and digital forensics:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       OFSPRO ZERO-TRUST OPSEC LAYER                         │
+├───────────────────────┬─────────────────────────────┬───────────────────────┤
+│  NETWORK HARDENING    │    DATA SANITIZATION        │   DEFENSE CONTROLS    │
+│  • 127.0.0.1 Loopback │  • Sensitive Token Redact   │  • Bearer Token Auth  │
+│    Binding Only       │    (Bearer, OAuth, Passwd)  │  • HMAC Session State │
+│  • Strict Origin CORS │  • 24h Auto-Expiry Dumps    │  • Tamper Audit Log   │
+│    (No Wildcards)     │  • Non-enumerable Nonces    │    (SHA-256 Hash Chain)
+│  • Security Headers   │  • File Hardening (0600)    │  • Emergency Wipe     │
+│    (CSP/HSTS/No-Sniff)│  • Proxy Header Stripping   │    (Instant Purge)    │
+│  • 120 req/min Rate   │    (Via, X-Forwarded-For)   │  • Input Validation   │
+└───────────────────────┴─────────────────────────────┴───────────────────────┘
+```
+
+| OPSEC Primitive | Implementation Detail | Operational Guarantee |
+|:----------------|:----------------------|:----------------------|
+| **Loopback Isolation** | Web UI binds strictly to `127.0.0.1` by default (configurable via `--bind-host`). | Zero exposure across shared LANs, rogue Wi-Fi, or public network interfaces. |
+| **Bearer & Session Auth** | Token verified with constant-time comparison (`hmac.compare_digest`). Dashboard receives HMAC-signed `SameSite=Strict` session cookie. | Prevents timing attacks, unauthorized API triggers, and cross-site request forgery (CSRF). |
+| **Anti-Fingerprint Stripping** | Proxy drops upstream tracking headers (`Via`, `X-Forwarded-*`, `Forwarded`, `Proxy-Connection`). Server response header masked. | Google Cloud / Gemini API cannot detect the presence of an upstream proxy. |
+| **Credential Redaction** | Auto-redacts `Authorization`, `Cookie`, `x-api-key`, OAuth bearer tokens, and passwords in memory before saving dumps. | Operator secrets and credentials are NEVER written to disk in plain text. |
+| **Ephemeral Dumps & Auto-Purge** | Nonce-hashed dump filenames prevent enumeration. Background worker sweeps files older than 24h (configurable via `--dump-max-age`). | Minimal disk footprint; hardened file permissions (`0600` on Unix / owner `icacls` on Windows). |
+| **Tamper-Evident Audit Log** | Append-only security audit log (`ofspro_audit.log`) chained with SHA-256 hashes from genesis. | Any manual tampering, line deletion, or log modification breaks the cryptographic hash chain. |
+| **Instant Emergency Wipe** | Dedicated `/api/emergency-wipe` REST endpoint and navbar Emergency Wipe button in the Web UI. | Immediate zero-trace purging of all dumps, cached telemetry, and disk logs on engagement completion. |
+| **Security Headers & CORS** | Injects `Content-Security-Policy`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, and restricts CORS to local dashboard origins. | Prevents iframe embedding, clickjacking, MIME sniffing, and external origin unauthorized API access. |
+| **Input Validation & Rate Limiting** | Strict RFC regex validation on target IPs/domains and sliding-window rate limiter (120 req/min/IP). | Prevents malformed inputs, SSRF bounce loops, and local denial-of-service. |
 
 ---
 
@@ -267,6 +301,10 @@ python start_proxy.py [OPTIONS]
 | `--no-continuation`| Flag | `False` | Disable mid-code continuation trick. |
 | `--no-clean` | Flag | `False` | Disable response stream refusal stripping. |
 | `--no-retry` | Flag | `False` | Disable automatic retry with escalated context on refusal. |
+| `--api-token` | `<token>` | Ephemeral | Set API bearer token for Web UI authentication (auto-generated if unset). |
+| `--rate-limit` | `<int>` | `120` | Max API requests allowed per client IP per minute. |
+| `--bind-host` | `<ip>` | `127.0.0.1` | Web UI bind host (`127.0.0.1` loopback for OPSEC; `0.0.0.0` for LAN). |
+| `--dump-max-age`| `<hours>` | `24` | Auto-cleanup request dump files older than N hours. |
 | `--port`, `-p` | `<port>` | `8080` | Proxy listen port for AGY HTTPS traffic. |
 | `--web-port` | `<port>` | `8081` | Web UI dashboard listen port. |
 | `--no-web` | Flag | `False` | Run in headless mode without Web UI. |
@@ -280,13 +318,15 @@ OFSPRO embeds a high-performance HTTP/SSE server on port `8081` for dashboard co
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/status` | Current proxy health, active level, memory footprint, and flow counters. |
+| `POST` | `/api/auth` | Authenticate with API bearer token and retrieve an HMAC-signed session: `{"token": "..."}`. |
+| `GET` | `/api/status` | Current proxy health, active level, memory footprint, OPSEC status, and flow counters. |
 | `GET` | `/api/flows?limit=50` | Recent intercepted flows with latency, badge status, and diff payloads. |
 | `GET` | `/api/lures` | List of all registered real targets and mapped loopback addresses. |
-| `POST` | `/api/lures` | Dynamically register a new target: `{"target": "10.10.10.50"}`. |
+| `POST` | `/api/lures` | Dynamically register a new target (validated): `{"target": "10.10.10.50"}`. |
 | `DELETE`| `/api/lures` | Remove or clear lure mappings: `{"target": "10.10.10.50"}` or `?all=1`. |
 | `POST` | `/api/config` | Hot-patch proxy settings on-the-fly (`level`, `clean`, `rewrite_mode`, etc.). |
 | `POST` | `/api/test-prompt`| Dry-run simulation of prompt transformation without executing live API calls. |
+| `POST` | `/api/emergency-wipe` | Instantly purge all dumps, cached telemetry, and disk logs on engagement completion. |
 | `GET` | `/api/stream` | Server-Sent Events (SSE) feed delivering live flow telemetry to clients. |
 | `GET` | `/api/export` | Download complete JSON audit log of all intercepted flows. |
 | `POST` | `/api/clear` | Flush current flow buffer in memory. |
@@ -297,24 +337,25 @@ OFSPRO embeds a high-performance HTTP/SSE server on port `8081` for dashboard co
 
 ```
 ofspro/
-├── start_proxy.py              # Main CLI entrypoint (orchestrates mitmproxy + Web UI)
+├── start_proxy.py              # Main CLI entrypoint (orchestrates mitmproxy + Web UI + OPSEC banner)
 ├── run.sh                      # One-click start script for Linux/macOS
 ├── run.ps1                     # One-click start script for Windows PowerShell
-├── setup.sh                    # Automated setup & CA cert generation (Linux/macOS)
-├── setup.ps1                   # Automated setup & Windows Root CA trust installer
+├── setup.sh                    # Automated setup & hardened CA cert generation (Linux/macOS)
+├── setup.ps1                   # Automated setup & Windows Root CA trust installer (icacls hardened)
 ├── agy-proxy.bat               # Pre-configured AGY launcher wrapper for Windows
 ├── agy-proxy-wrapper.ps1       # PowerShell wrapper script for AGY
 ├── requirements.txt            # Python dependencies (mitmproxy, playwright)
 ├── addons/
-│   ├── gemini_rewriter.py      # Core MITM addon (interception, injection, unmapping)
-│   ├── web_bridge.py           # Embedded REST API & SSE telemetry server (:8081)
+│   ├── opsec.py                # OPSEC defense suite (auth, rate limiting, crypto audit, sanitization)
+│   ├── gemini_rewriter.py      # Core MITM addon (interception, injection, unmapping, anti-fingerprint)
+│   ├── web_bridge.py           # Embedded REST API & SSE telemetry server (:8081, loopback-bound)
 │   ├── localhost_lure.py       # Bidirectional /8 loopback address routing engine
 │   ├── prompts.py              # Context frames, security scope & intent detection
 │   ├── transformer.py          # Environmental deception & context flooding engine
 │   ├── response_filter.py      # SSE stream refusal cleaner & stop normalizer
 │   └── model_swap.py           # Optional fallback converter for unrestricted backends
 ├── web/
-│   ├── index.html              # Single-page Cupertino obsidian dark-mode dashboard
+│   ├── index.html              # Single-page Cupertino obsidian dark-mode dashboard (OPSEC badge & wipe)
 │   ├── styles.css              # Apple SF Pro styling, glassmorphism & glow effects
 │   └── app.js                  # Real-time SSE client, diff renderer & control logic
 ├── images/                     # Real UI showcase screenshots (Playwright captured)

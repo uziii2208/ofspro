@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
     Offensive Security Gemini Proxy - Windows Setup
@@ -422,6 +422,12 @@ if ($certifiBundle -and (Test-Path $certifiBundle)) {
     Write-Ok 'Created standalone bundle (mitmproxy CA only)'
     Write-Item 'Notice: For full public CA validation, install certifi: pip install certifi'
 }
+# OPSEC Hardening: Restrict certificate bundle permissions to current user only
+try {
+    & icacls $Combined /inheritance:r /grant:r "$($env:USERNAME):(R,W)" | Out-Null
+    & icacls $Cert /inheritance:r /grant:r "$($env:USERNAME):(R,W)" | Out-Null
+    Write-Ok 'Hardened CA certificate permissions via icacls (owner-only)'
+} catch {}
 Write-ItemLast "Output bundle: $Combined"
 Write-StepFooter
 

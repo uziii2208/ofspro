@@ -1063,6 +1063,32 @@
         });
       });
     }
+
+    // Emergency Data Wipe Button
+    const emergencyWipeBtn = document.getElementById('emergencyWipeBtn');
+    if (emergencyWipeBtn) {
+      emergencyWipeBtn.addEventListener('click', async () => {
+        sound.playNuclear();
+        try {
+          const res = await fetch('/api/emergency-wipe', { method: 'POST' });
+          if (res.ok) {
+            showToast('OPSEC EMERGENCY WIPE: All dumps & sensitive traces purged', 'danger', 4000);
+            if (termBody) {
+              const wipeLine = {
+                timestamp: new Date().toTimeString().split(' ')[0],
+                level: 'error',
+                message: 'EMERGENCY WIPE EXECUTED: All request dumps and audit trails shredded from disk.'
+              };
+              appendTerminalLog(wipeLine);
+            }
+          } else {
+            showToast('Emergency wipe failed', 'warning');
+          }
+        } catch (e) {
+          showToast('Failed to trigger emergency wipe', 'warning');
+        }
+      });
+    }
   }
 
   function appendTerminalLog(entry) {

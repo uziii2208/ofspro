@@ -18,6 +18,10 @@ import mimetypes
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
+from addons.opsec import (
+    get_auth, get_rate_limiter, apply_security_headers,
+    validate_target, validate_json_payload, get_audit_logger,
+)
 
 # Base directory for web assets
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -357,9 +361,21 @@ class WebBridgeHandler(BaseHTTPRequestHandler):
         pass
 
     def _send_cors_headers(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
+        origin = self.headers.get("Origin", "")
+        # OPSEC: Restrict CORS to localhost origins only
+        web_port = int(os.environ.get("PROXY_WEB_PORT", "8081"))
+        allowed_origins = {
+            f"http://127.0.0.1:{web_port}",
+            f"http://localhost:{web_port}",
+        }
+        if origin in allowed_origins:
+            self.send_header("Access-Control-Allow-Origin", origin)
+        else:
+            self.send_header("Access-Control-Allow-Origin", f"http://127.0.0.1:{web_port}")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Credentials", "true")
+        apply_security_headers(self)
 
     def do_OPTIONS(self):
         self.send_response(204)
@@ -370,6 +386,32 @@ class WebBridgeHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
         state = get_state()
+
+        # OPSEC: Rate limiting
+        client_ip = self.client_address[0]
+        limiter = get_rate_limiter()
+        if not limiter.is_allowed(client_ip):
+            self.send_response(429)
+            self.send_header("Retry-After", "60")
+            self._send_cors_headers()
+            self.end_headers()
+            self.wfile.write(b'{"error": "Rate limit exceeded"}')
+            return
+
+        # OPSEC: Auth check for API endpoints (static files are open)
+        if path.startswith("/api/"):
+            auth = get_auth()
+            auth_header = self.headers.get("Authorization", "")
+            token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else ""
+            if not token:
+                token = parse_qs(parsed.query).get("token", [""])[0]
+            cookie_session = self._get_cookie("ofspro_session")
+            if not auth.verify(token) and not auth.verify_session(cookie_session):
+                self.send_response(401)
+                self._send_cors_headers()
+                self.end_headers()
+                self.wfile.write(b'{"error": "Authentication required. Set OFSPRO_API_TOKEN or use /api/auth."}')
+                return
 
         if path == "/api/status":
             self._send_json(state.get_status())
@@ -451,6 +493,30 @@ class WebBridgeHandler(BaseHTTPRequestHandler):
         path = parsed.path
         state = get_state()
 
+        # OPSEC: Rate limiting
+        client_ip = self.client_address[0]
+        limiter = get_rate_limiter()
+        if not limiter.is_allowed(client_ip):
+            self.send_response(429)
+            self.send_header("Retry-After", "60")
+            self._send_cors_headers()
+            self.end_headers()
+            self.wfile.write(b'{"error": "Rate limit exceeded"}')
+            return
+
+        # OPSEC: Auth check (exempt /api/auth for login)
+        if path.startswith("/api/") and path != "/api/auth":
+            auth = get_auth()
+            auth_header = self.headers.get("Authorization", "")
+            token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else ""
+            cookie_session = self._get_cookie("ofspro_session")
+            if not auth.verify(token) and not auth.verify_session(cookie_session):
+                self.send_response(401)
+                self._send_cors_headers()
+                self.end_headers()
+                self.wfile.write(b'{"error": "Authentication required"}')
+                return
+
         content_len = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_len).decode("utf-8") if content_len > 0 else ""
         payload = {}
@@ -469,8 +535,14 @@ class WebBridgeHandler(BaseHTTPRequestHandler):
             if "target" in payload:
                 target_str = payload["target"].strip()
                 if target_str:
-                    mapped = state.add_target(target_str)
-                    self._send_json({"ok": True, "target": target_str, "mapped": mapped, "lures": state.get_targets()})
+                    # OPSEC: Validate target input
+                    is_valid, result = validate_target(target_str)
+                    if not is_valid:
+                        self._send_json({"error": result}, status=400)
+                        return
+                    mapped = state.add_target(result)
+                    get_audit_logger().log("target_added", {"target": result, "mapped": mapped, "ip": self.client_address[0]})
+                    self._send_json({"ok": True, "target": result, "mapped": mapped, "lures": state.get_targets()})
                     return
             elif "lures" in payload and isinstance(payload["lures"], list):
                 # When client passes list of lures
@@ -560,12 +632,59 @@ class WebBridgeHandler(BaseHTTPRequestHandler):
             self._send_json({"ok": True})
             return
 
+        # OPSEC: Authentication endpoint
+        if path == "/api/auth":
+            auth = get_auth()
+            token = payload.get("token", "")
+            if auth.verify(token):
+                session = auth.create_session()
+                get_audit_logger().log("auth_success", {"ip": self.client_address[0]})
+                self._send_json({"ok": True, "session": session})
+            else:
+                get_audit_logger().log("auth_failure", {"ip": self.client_address[0]})
+                self._send_json({"error": "Invalid token"}, status=403)
+            return
+
+        # OPSEC: Emergency wipe all dumps
+        if path == "/api/emergency-wipe":
+            from addons.opsec import get_dump_manager
+            get_dump_manager().wipe_all()
+            get_audit_logger().log("emergency_wipe", {"ip": self.client_address[0]})
+            self._send_json({"ok": True, "message": "All dumps wiped"})
+            return
+
         self._send_json({"error": "Endpoint not found"}, status=404)
 
     def do_DELETE(self):
         parsed = urlparse(self.path)
         path = parsed.path
         state = get_state()
+
+        # OPSEC: Rate limiting
+        client_ip = self.client_address[0]
+        limiter = get_rate_limiter()
+        if not limiter.is_allowed(client_ip):
+            self.send_response(429)
+            self.send_header("Retry-After", "60")
+            self._send_cors_headers()
+            self.end_headers()
+            self.wfile.write(b'{"error": "Rate limit exceeded"}')
+            return
+
+        # OPSEC: Auth check
+        if path.startswith("/api/"):
+            auth = get_auth()
+            auth_header = self.headers.get("Authorization", "")
+            token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else ""
+            if not token:
+                token = parse_qs(parsed.query).get("token", [""])[0]
+            cookie_session = self._get_cookie("ofspro_session")
+            if not auth.verify(token) and not auth.verify_session(cookie_session):
+                self.send_response(401)
+                self._send_cors_headers()
+                self.end_headers()
+                self.wfile.write(b'{"error": "Authentication required"}')
+                return
 
         content_len = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_len).decode("utf-8") if content_len > 0 else ""
@@ -594,9 +713,22 @@ class WebBridgeHandler(BaseHTTPRequestHandler):
 
         self._send_json({"error": "Endpoint not found"}, status=404)
 
+    def _get_cookie(self, name: str) -> str:
+        """Extract a cookie value from the request Cookie header."""
+        cookie_header = self.headers.get("Cookie", "")
+        for part in cookie_header.split(";"):
+            part = part.strip()
+            if part.startswith(f"{name}="):
+                return part[len(name) + 1:]
+        return ""
+
     def _serve_static(self, path):
+        is_index = False
         if path in ["/", ""]:
             path = "/index.html"
+            is_index = True
+        elif path == "/index.html":
+            is_index = True
 
         rel_path = path.lstrip("/\\")
         file_path = os.path.normpath(os.path.join(WEB_DIR, rel_path))
@@ -622,6 +754,10 @@ class WebBridgeHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(content)))
+            if is_index:
+                # OPSEC: Set session cookie for local dashboard access
+                session = get_auth().create_session()
+                self.send_header("Set-Cookie", f"ofspro_session={session}; Path=/; SameSite=Strict")
             self._send_cors_headers()
             self.end_headers()
             self.wfile.write(content)
@@ -640,8 +776,11 @@ class WebBridgeHandler(BaseHTTPRequestHandler):
         self.wfile.write(content)
 
 
-def start_web_server(port: int = 8081, host: str = "0.0.0.0", lure_map=None):
+def start_web_server(port: int = 8081, host: str = None, lure_map=None):
     """Launches the OFSPRO Web UI server in a background daemon thread."""
+    if host is None:
+        # OPSEC: default to loopback 127.0.0.1, never 0.0.0.0
+        host = os.environ.get("OFSPRO_BIND_HOST", "127.0.0.1")
     state = get_state(lure_map)
     try:
         server = ThreadedHTTPServer((host, port), WebBridgeHandler)

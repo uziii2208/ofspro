@@ -33,8 +33,7 @@ from addons.localhost_lure import TargetMap, get_localhost_frame
 
 import tempfile
 
-DUMP_DIR = os.path.join(tempfile.gettempdir(), "agyproxy_dumps")
-os.makedirs(DUMP_DIR, exist_ok=True)
+from addons.opsec import get_dump_manager, get_audit_logger
 
 GEMINI_HOST_PATTERNS = [
     "cloudcode-pa.googleapis.com",
@@ -235,13 +234,11 @@ class GeminiRewriter:
 
     def _dump(self, flow, body, tag):
         self._dump_count += 1
-        fname = f"{DUMP_DIR}/req_{self._dump_count}_{int(time.time())}_{tag}.json"
-        try:
-            with open(fname, "w") as f:
-                json.dump({"path": flow.request.path[:200], "body": body},
-                          f, indent=2, ensure_ascii=False)
-        except Exception:
-            pass
+        dump_mgr = get_dump_manager()
+        dump_mgr.save_dump(
+            {"path": flow.request.path[:200], "body": body},
+            tag
+        )
 
     def _get_inner(self, body):
         if "request" in body and isinstance(body["request"], dict):
@@ -253,6 +250,9 @@ class GeminiRewriter:
 
     def requestheaders(self, flow):
         if self._is_target(flow):
+            # OPSEC: Strip proxy fingerprinting headers to prevent upstream detection
+            for h in ["via", "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host", "forwarded", "proxy-connection"]:
+                flow.request.headers.pop(h, None)
             ctx.log.warn(f"[AGY] >>> {flow.request.method} "
                          f"{flow.request.pretty_host}{flow.request.path[:120]}")
 
