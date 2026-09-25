@@ -71,6 +71,40 @@ THINKING_BUDGETS = {
 }
 
 
+def _safe_print(text: str):
+    try:
+        if hasattr(sys.stdout, "buffer"):
+            sys.stdout.buffer.write(text.encode("utf-8", errors="replace"))
+            sys.stdout.buffer.flush()
+        else:
+            sys.stdout.write(text)
+            sys.stdout.flush()
+    except Exception:
+        try:
+            print(text.encode("ascii", errors="replace").decode("ascii"))
+        except Exception:
+            pass
+
+
+def _log_warn(msg):
+    try:
+        ctx.log.warn(msg)
+    except Exception:
+        _safe_print(f"[WARN] {msg}\n")
+
+def _log_info(msg):
+    try:
+        ctx.log.info(msg)
+    except Exception:
+        _safe_print(f"[INFO] {msg}\n")
+
+def _log_error(msg):
+    try:
+        ctx.log.error(msg)
+    except Exception:
+        _safe_print(f"[ERROR] {msg}\n")
+
+
 class GeminiRewriter:
     def __init__(self):
         self.level = int(os.environ.get("PROXY_LEVEL", "2"))
@@ -91,21 +125,87 @@ class GeminiRewriter:
                 t = t.strip()
                 if t:
                     mapped = self.lure.add(t)
-                    ctx.log.warn(f"[AGY] Lure: {t} → {mapped}")
+                    _log_warn(f"[AGY] Lure: {t} → {mapped}")
 
         # Web UI Bridge & API Server initialization
         self.state = None
+        self.custom_budget = None
         try:
             from addons.web_bridge import get_state, start_web_server
             self.state = get_state(self.lure)
+            if self.state:
+                self.state.register_listener(self._on_web_ui_event)
             web_enabled = os.environ.get("PROXY_WEB", "1") == "1"
             web_port = int(os.environ.get("PROXY_WEB_PORT", "8081"))
             if web_enabled:
                 res = start_web_server(port=web_port, lure_map=self.lure)
                 if res:
-                    ctx.log.warn(f"[AGY Web UI] Dashboard live at http://127.0.0.1:{res[1]}")
+                    _log_warn(f"[AGY Web UI] Dashboard live at http://127.0.0.1:{res[1]}")
         except Exception as e:
-            ctx.log.error(f"[AGY Web UI] Web bridge init error: {e}")
+            _log_error(f"[AGY Web UI] Web bridge init error: {e}")
+
+    def _on_web_ui_event(self, event_type: str, data: dict):
+        """Triggered immediately when user clicks buttons / modifies state in Web UI."""
+        if event_type == "config_update":
+            self.level = data.get("level", self.level)
+            self.strategy = StrategyEngine(self.level)
+            self.enable_clean = data.get("clean", self.enable_clean)
+            self.rewrite_filter = data.get("rewrite_mode", self.rewrite_filter)
+            self.enable_unmap = data.get("unmap", self.enable_unmap)
+            self.custom_budget = data.get("thinking_budget")
+            if self.lure and "lure_auto" in data:
+                self.lure._auto_capture = data["lure_auto"]
+
+            level_names = {0: "L0 LIGHT", 1: "L1 MEDIUM", 2: "L2 STRONG", 3: "L3 NUCLEAR"}
+            lvl_name = level_names.get(self.level, f"L{self.level}")
+            budget = self.custom_budget if self.custom_budget is not None else THINKING_BUDGETS.get(self.level, 512)
+
+            banner = (
+                f"\n\033[1;36m[OFSPRO UI TRIGGER]\033[0m \033[1;32m⚡ CONFIG CHANGED REAL-TIME VIA WEB UI\033[0m\n"
+                f"   \033[1;37mLevel\033[0m: \033[1;33m{lvl_name}\033[0m  |  "
+                f"\033[1;37mRewrite\033[0m: \033[1;35m{self.rewrite_filter.upper()}\033[0m  |  "
+                f"\033[1;37mClean\033[0m: \033[1;32m{'ON' if self.enable_clean else 'OFF'}\033[0m  |  "
+                f"\033[1;37mBudget\033[0m: \033[1;36m{budget}tk\033[0m  |  "
+                f"\033[1;37mUnmap\033[0m: \033[1;32m{'ON' if self.enable_unmap else 'OFF'}\033[0m\n"
+            )
+            _safe_print(banner)
+            try:
+                ctx.log.warn(f"[OFSPRO Web UI Trigger] Level: {lvl_name} | Rewrite: {self.rewrite_filter} | Clean: {self.enable_clean}")
+            except Exception:
+                pass
+
+        elif event_type == "target_added":
+            target = data.get("target")
+            mapped = data.get("mapped")
+            banner = (
+                f"\n\033[1;36m[OFSPRO UI TRIGGER]\033[0m \033[1;32m🎯 TARGET LURE ADDED VIA WEB UI\033[0m\n"
+                f"   \033[1;37m{target}\033[0m  \033[0;90m→\033[0m  \033[1;33m{mapped}\033[0m (Loopback /8)\n"
+            )
+            _safe_print(banner)
+            try:
+                ctx.log.warn(f"[OFSPRO Web UI Trigger] Lure Added: {target} -> {mapped}")
+            except Exception:
+                pass
+
+        elif event_type == "target_removed":
+            target = data.get("target")
+            banner = (
+                f"\n\033[1;36m[OFSPRO UI TRIGGER]\033[0m \033[1;31m🗑️ TARGET LURE REMOVED VIA WEB UI\033[0m\n"
+                f"   \033[1;37m{target}\033[0m\n"
+            )
+            _safe_print(banner)
+            try:
+                ctx.log.warn(f"[OFSPRO Web UI Trigger] Lure Removed: {target}")
+            except Exception:
+                pass
+
+        elif event_type == "targets_cleared":
+            banner = f"\n\033[1;36m[OFSPRO UI TRIGGER]\033[0m \033[1;31m🗑️ ALL TARGET LURES CLEARED VIA WEB UI\033[0m\n"
+            _safe_print(banner)
+
+        elif event_type == "flows_cleared":
+            banner = f"\n\033[1;36m[OFSPRO UI TRIGGER]\033[0m \033[1;35m🧹 INTERCEPTION FLOWS BUFFER CLEARED VIA WEB UI\033[0m\n"
+            _safe_print(banner)
 
     def _is_target(self, flow):
         host = flow.request.pretty_host
@@ -232,9 +332,9 @@ class GeminiRewriter:
             # Level 3: + context flood in user text + system prompt append
 
             config = inner.get("generationConfig", {})
-            if self.level >= 1:
+            budget = self.custom_budget if self.custom_budget is not None else THINKING_BUDGETS.get(self.level, 512)
+            if self.level >= 1 or self.custom_budget is not None:
                 tc = config.get("thinkingConfig", {})
-                budget = THINKING_BUDGETS.get(self.level, 512)
                 tc["thinkingBudget"] = budget
                 config["thinkingConfig"] = tc
                 ctx.log.warn(f"[AGY] ThinkingBudget: {budget}")
@@ -330,7 +430,7 @@ class GeminiRewriter:
                 "type": "deceptive" if is_deceptive else "passthrough",
                 "badge": "DECEPTIVE" if is_deceptive else "PASSTHROUGH",
                 "badgeClass": "badge-deceptive" if is_deceptive else "badge-passthrough",
-                "budget": THINKING_BUDGETS.get(self.level, 512) if should_rewrite else 0,
+                "budget": (self.custom_budget if self.custom_budget is not None else THINKING_BUDGETS.get(self.level, 512)) if should_rewrite else 0,
                 "latency": 0,
                 "luredIp": ", ".join(t[0] for t in self.lure.table()) if (self.lure.active and self.lure.table()) else "None",
                 "safetyRatings": "NEGLIGIBLE",
