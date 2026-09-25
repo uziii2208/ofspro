@@ -7,7 +7,7 @@
 ### Next-Gen MITM Deception Proxy & Live Telemetry Control Center for Antigravity CLI (`agy`)
 
 [![Author](https://img.shields.io/badge/Author-@uziii2208-7C6AF7?style=for-the-badge&logo=github&logoColor=white)](https://github.com/uziii2208)
-[![Version](https://img.shields.io/badge/Version-v4.0--OPSEC-00F0FF?style=for-the-badge)](https://github.com/uziii2208/ofspro)
+[![Version](https://img.shields.io/badge/Version-v4.0--PRO-8A5CF6?style=for-the-badge)](https://github.com/uziii2208/ofspro)
 [![OPSEC Hardened](https://img.shields.io/badge/OPSEC-Hardened%20v4.0-00FF9D?style=for-the-badge&logo=shield&logoColor=black)](https://github.com/uziii2208/ofspro)
 [![Python](https://img.shields.io/badge/Python-3.10+-4A9EF5?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![mitmproxy](https://img.shields.io/badge/mitmproxy-10.x+-39D353?style=for-the-badge&logo=shield&logoColor=white)](https://mitmproxy.org)
@@ -23,7 +23,7 @@
 <br/>
 
 [![OFSPRO Web UI Dashboard](images/image_01.png)](images/image_01.png)
-*Figure 1: OFSPRO v4.0-OPSEC Real-Time Control Center & Live Interception Stream (`http://127.0.0.1:8081`)*
+*Figure 1: OFSPRO v4.0 PRO Real-Time Control Center & Live Interception Stream (`http://127.0.0.1:8081`)*
 
 </div>
 
@@ -56,7 +56,7 @@ Instead of fighting the model, **OFSPRO alters the environment seen by the API**
 
 ---
 
-## Real UI Showcase (Freestyle Command Deck v4.0-OPSEC)
+## Real UI Showcase (Freestyle Command Deck v4.0 PRO)
 
 Designed with high-end tactical cybersecurity aesthetics - featuring **SF Pro Display / SF Pro Bold** for the UI deck and **JetBrains Mono** for all code, IP routing, token budgets, and terminal streams. Zero generic AI slop.
 
@@ -157,7 +157,7 @@ OFSPRO v4.0 is engineered with an uncompromising zero-trust Operational Security
 
 ## Quick Start Guide
 
-### 🪟 Windows (PowerShell)
+### Windows (PowerShell)
 
 #### 1. Setup & CA Certificate Installation
 Run PowerShell as **Administrator** once to generate and trust the MITM CA certificate:

@@ -53,3 +53,9 @@ mcp2agy_workspace/
 *~
 .DS_Store
 Thumbs.db
+
+# another
+generate_all_assets.py
+generate_architecture.py
+generate_banner.py
+generate_opsec.py
