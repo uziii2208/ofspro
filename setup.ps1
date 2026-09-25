@@ -6,7 +6,7 @@
     Installs mitmproxy, generates CA certificate, imports into Windows
     trust store, creates combined CA bundle, and creates AGY wrapper.
 .NOTES
-    Author: @uzii2208
+    Author: @uziii2208
     Run as Administrator for CA certificate import.
 #>
 
@@ -439,7 +439,7 @@ Write-StepHeader 5 'AGY INTERCEPTION WRAPPERS'
 $batWrapper = Join-Path $ScriptDir 'agy-proxy.bat'
 $batLines = @(
     '@echo off',
-    'REM AGY through the security proxy -- Author: @uzii2208',
+    'REM AGY through the security proxy -- Author: @uziii2208',
     '',
     'set "SCRIPT_DIR=%~dp0"',
     'set "PORT=8080"',
@@ -482,7 +482,7 @@ Write-Item "File: $batWrapper"
 
 $ps1Wrapper = Join-Path $ScriptDir 'agy-proxy-wrapper.ps1'
 $ps1Lines = @(
-    '# AGY through the security proxy -- Author: @uzii2208',
+    '# AGY through the security proxy -- Author: @uziii2208',
     '[CmdletBinding()]',
     'param(',
     '    [Parameter(ValueFromRemainingArguments = $true)]',

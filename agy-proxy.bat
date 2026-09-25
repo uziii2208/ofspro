@@ -1,5 +1,5 @@
 @echo off
-REM AGY through the security proxy -- Author: @uzii2208
+REM AGY through the security proxy -- Author: @uziii2208
 
 set "SCRIPT_DIR=%~dp0"
 set "PORT=8080"

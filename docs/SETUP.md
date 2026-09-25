@@ -1,6 +1,6 @@
 # Setup Guide
 
-Author: @uzii2208
+Author: @uziii2208
 
 ## Prerequisites
 
@@ -222,4 +222,4 @@ python start_proxy.py --no-web
 
 ---
 
-*Author: [@uzii2208](https://github.com/uzii2208)*
+*Author: [@uziii2208](https://github.com/uziii2208)*

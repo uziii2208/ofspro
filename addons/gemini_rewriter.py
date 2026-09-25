@@ -1,6 +1,6 @@
 """
 mitmproxy addon: Gemini API interceptor for Antigravity CLI (AGY).
-Author: @uzii2208
+Author: @uziii2208
 
 Strategy v3: ZERO prompt manipulation.
 

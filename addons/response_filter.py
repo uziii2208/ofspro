@@ -2,7 +2,7 @@
 Response post-processing — strip refusals, detect blocks, extract
 partial content from safety-truncated responses.
 
-Author: @uzii2208
+Author: @uziii2208
 """
 
 import re

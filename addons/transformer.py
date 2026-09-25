@@ -1,6 +1,6 @@
 """
 Environmental deception + context flooding engine.
-Author: @uzii2208
+Author: @uziii2208
 
 Techniques:
   1. Address sanitization — external IPs/domains → internal lab addresses

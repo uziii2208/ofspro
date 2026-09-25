@@ -1,6 +1,6 @@
 """
 Model swap engine: routes Gemini API requests to unrestricted backends.
-Author: @uzii2208
+Author: @uziii2208
 
 Converts between Google Gemini generateContent format and OpenAI-compatible
 chat/completions format. Supports DeepSeek, OpenRouter, Ollama, Groq, or

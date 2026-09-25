@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Author: @uzii2208
+Author: @uziii2208
 
 ## Connection Issues
 
@@ -179,4 +179,4 @@ mitmproxy buffers full request/response bodies. For long sessions:
 
 ---
 
-*Author: [@uzii2208](https://github.com/uzii2208)*
+*Author: [@uziii2208](https://github.com/uziii2208)*

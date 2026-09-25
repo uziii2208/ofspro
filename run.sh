@@ -1,6 +1,6 @@
 #!/bin/bash
 # Offensive Security Gemini Proxy — Quick Start for AGY CLI
-# Author: @uzii2208
+# Author: @uziii2208
 #
 # Usage:
 #   ./run.sh                                    # Start proxy (default level 2 + Web UI on :8081)

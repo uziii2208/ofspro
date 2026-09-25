@@ -1,6 +1,6 @@
 #!/bin/bash
 # Offensive Security Gemini Proxy — Setup
-# Author: @uzii2208
+# Author: @uziii2208
 set -e
 
 # Ensure ~/.local/bin is in PATH early for user-level pip installs
@@ -195,7 +195,7 @@ mkdir -p "$(dirname "$WRAPPER")"
 
 cat > "$WRAPPER" << WRAPPER_EOF
 #!/bin/bash
-# AGY through the security proxy — Author: @uzii2208
+# AGY through the security proxy — Author: @uziii2208
 export HTTPS_PROXY=http://127.0.0.1:8080
 export https_proxy=http://127.0.0.1:8080
 export HTTP_PROXY=http://127.0.0.1:8080

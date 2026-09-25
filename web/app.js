@@ -1,7 +1,7 @@
 /**
  * OFSPRO Web UI - Offensive Security Gemini Proxy Dashboard
  * 100% Non-Hallucination Real Intercept & Control Engine
- * Author: @uzii2208
+ * Author: @uziii2208
  */
 
 (() => {

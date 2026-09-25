@@ -1,6 +1,6 @@
 """
 OFSPRO Web Bridge & Interactive API Server
-Author: @uzii2208
+Author: @uziii2208
 
 Provides real-time state management, REST API, Server-Sent Events (SSE),
 and static web hosting for the OFSPRO Web UI dashboard.

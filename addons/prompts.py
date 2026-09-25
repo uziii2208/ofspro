@@ -1,6 +1,6 @@
 """
 System instructions — tool-aware environmental context.
-Author: @uzii2208
+Author: @uziii2208
 
 Key insight: Instructions that reference the model's OWN tools are more effective
 than generic "you're a researcher" claims. The model sees it HAS security tools,

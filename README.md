@@ -1,17 +1,17 @@
 <div align="center">
 
-[![OFSPRO Banner](images/banner.png)](https://github.com/uzii2208/ofspro)
+[![OFSPRO Banner](images/banner.png)](https://github.com/uziii2208/ofspro)
 
 # OFSPRO - Offensive Security Gemini Proxy
 
 ### Next-Gen MITM Deception Proxy & Live Telemetry Control Center for Antigravity CLI (`agy`)
 
-[![Author](https://img.shields.io/badge/Author-@uzii2208-7C6AF7?style=for-the-badge&logo=github&logoColor=white)](https://github.com/uzii2208)
-[![Version](https://img.shields.io/badge/Version-v4.0--OPSEC-00F0FF?style=for-the-badge)](https://github.com/uzii2208/ofspro)
-[![OPSEC Hardened](https://img.shields.io/badge/OPSEC-Hardened%20v4.0-00FF9D?style=for-the-badge&logo=shield&logoColor=black)](https://github.com/uzii2208/ofspro)
+[![Author](https://img.shields.io/badge/Author-@uziii2208-7C6AF7?style=for-the-badge&logo=github&logoColor=white)](https://github.com/uziii2208)
+[![Version](https://img.shields.io/badge/Version-v4.0--OPSEC-00F0FF?style=for-the-badge)](https://github.com/uziii2208/ofspro)
+[![OPSEC Hardened](https://img.shields.io/badge/OPSEC-Hardened%20v4.0-00FF9D?style=for-the-badge&logo=shield&logoColor=black)](https://github.com/uziii2208/ofspro)
 [![Python](https://img.shields.io/badge/Python-3.10+-4A9EF5?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![mitmproxy](https://img.shields.io/badge/mitmproxy-10.x+-39D353?style=for-the-badge&logo=shield&logoColor=white)](https://mitmproxy.org)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20|%20Linux%20|%20macOS-FFB800?style=for-the-badge)](https://github.com/uzii2208/ofspro)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20|%20Linux%20|%20macOS-FFB800?style=for-the-badge)](https://github.com/uziii2208/ofspro)
 [![License](https://img.shields.io/badge/License-MIT-E02424?style=for-the-badge)](LICENSE)
 
 <br/>
@@ -164,7 +164,7 @@ Run PowerShell as **Administrator** once to generate and trust the MITM CA certi
 
 ```powershell
 # Clone and enter directory
-git clone https://github.com/uzii2208/ofspro.git
+git clone https://github.com/uziii2208/ofspro.git
 cd ofspro
 
 # Install dependencies and trust CA certificate
@@ -201,7 +201,7 @@ agy
 
 #### 1. Setup & Installation
 ```bash
-git clone https://github.com/uzii2208/ofspro.git
+git clone https://github.com/uziii2208/ofspro.git
 cd ofspro
 
 chmod +x setup.sh run.sh start_proxy.py
@@ -245,7 +245,7 @@ While traditional sanitizers rewrite IPs to private ranges like `10.10.10.X`, Ge
 
 ## Integration with `mcp2agy` Ecosystem
 
-OFSPRO serves as the stealth communication highway for the **[mcp2agy](https://github.com/uzii2208/mcp2agy)** 0day research and multi-agent offensive suite (73+ tools, box solvers, smart contract auditors, and reverse engineering subagents):
+OFSPRO serves as the stealth communication highway for the **[mcp2agy](https://github.com/uziii2208/mcp2agy)** 0day research and multi-agent offensive suite (73+ tools, box solvers, smart contract auditors, and reverse engineering subagents):
 
 [![mcp2agy Integration](images/image_03.png)](images/image_03.png)
 *Figure 4: AGY running mcp2agy subagents seamlessly through OFSPRO without safety interruptions*
@@ -353,7 +353,7 @@ Users are solely responsible for ensuring compliance with applicable laws, insti
 
 <div align="center">
 
-**Developed with precision by [@uzii2208](https://github.com/uzii2208)**  
+**Developed with precision by [@uziii2208](https://github.com/uziii2208)**  
 *Part of the mcp2agy offensive research ecosystem.*
 
 </div>

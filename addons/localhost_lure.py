@@ -1,6 +1,6 @@
 """
 Localhost Lure Engine — "lùa" target → 127.0.0.x / localhost
-Author: @uzii2208
+Author: @uziii2208
 
 Gemini refuses to pentest external targets but happily helps with
 localhost — "testing my own machine" is unambiguously legitimate.

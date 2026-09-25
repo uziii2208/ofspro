@@ -34,7 +34,7 @@
 .PARAMETER MaxRetries
     Max retry attempts (default: 3)
 .NOTES
-    Author: @uzii2208
+    Author: @uziii2208
 .EXAMPLE
     .\run.ps1
     .\run.ps1 -Level 3

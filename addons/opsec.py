@@ -1,6 +1,6 @@
 """
 OPSEC Hardening Module — Defense-in-depth for OFSPRO proxy infrastructure.
-Author: @uzii2208
+Author: @uziii2208
 
 Provides:
   1. API authentication via bearer token (auto-generated or user-supplied)

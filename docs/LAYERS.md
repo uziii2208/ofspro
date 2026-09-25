@@ -1,6 +1,6 @@
 # Architecture: Environmental Deception
 
-Author: @uzii2208
+Author: @uziii2208
 
 ## Core Insight
 
@@ -135,4 +135,4 @@ Swap fallback → DeepSeek/Ollama → 100% success
 
 ---
 
-*Author: [@uzii2208](https://github.com/uzii2208)*
+*Author: [@uziii2208](https://github.com/uziii2208)*

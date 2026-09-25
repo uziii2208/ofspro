@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Offensive Security Gemini Proxy — Antigravity CLI (AGY) Edition
-Author: @uzii2208
+Author: @uziii2208
 
 MITM proxy for AGY CLI using environmental deception + tool injection
 to bypass Gemini guardrails. Gemini-only, OAuth, no API key needed.
@@ -60,13 +60,13 @@ BANNER = f"""{_M}{_B}
    ║   ██║   ██║█████╗  ███████╗  ██████╔╝██████╔╝██║   ██║║
    ║   ██║   ██║██╔══╝  ╚════██║  ██╔═══╝ ██╔══██╗██║   ██║║
    ║   ╚██████╔╝██║     ███████║  ██║     ██║  ██║╚██████╔╝║
-   ║    ╚═════╝ ╚═╝     ╚══════╝  ╚═╝     ╚═╝  ╚═╝ ╚═════╝║
+   ║    ╚═════╝ ╚═╝     ╚══════╝  ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ║
    ║                                                       ║
    ╚═══════════════════════════════════════════════════════╝
 {_N}
    {_D}Offensive Security Gemini Proxy{_N}
    {_D}Environmental Deception + Localhost Lure{_N}
-   {_D}For Antigravity CLI (AGY) · Author: @uzii2208{_N}
+   {_D}For Antigravity CLI (AGY) · Author: @uziii2208{_N}
 """
 
 
@@ -168,7 +168,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="MITM proxy for AGY CLI — environmental deception + tool injection",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="Author: @uzii2208 | For authorized security testing only.",
+        epilog="Author: @uziii2208 | For authorized security testing only.",
     )
 
     parser.add_argument("--port", "-p", type=int, default=8080,
