@@ -3,10 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>OFSPRO // Offensive Security Gemini Proxy</title>
+  <meta name="description" content="OFSPRO Control Center - Offensive Security Gemini Proxy">
+  <meta name="color-scheme" content="dark">
+  <title>OFSPRO — Offensive Security Gemini Proxy · Control Center</title>
   
-  <!-- Apple SF Pro Font CDN with fallback system fonts -->
-  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/sf-pro-display">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+  <link href="https://fonts.cdnfonts.com/css/sf-pro-display" rel="stylesheet">
+
+  <!-- JetBrains Mono specific styling -->
+  <style>
+    #codeBefore, #codeAfter, #codeUnified, #codeRaw, #transformedCode, #terminalBody, #agySnippet, .mono-code, pre, code {
+      font-family: 'JetBrains Mono', monospace !important;
+    }
+    body {
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+  </style>
+
   <!-- Stylesheet -->
   <link rel="stylesheet" href="styles.css">
   
@@ -41,7 +56,7 @@
           <div class="brand-info">
             <div class="brand-title-wrap">
               <span class="brand-name">OFSPRO</span>
-              <span class="brand-badge">v3.6-PRO</span>
+              <span class="brand-badge">v4.0-PRO</span>
             </div>
             <span class="brand-desc">Gemini Guardrail Deception · AGY</span>
           </div>
@@ -187,13 +202,15 @@
             <!-- Search Input -->
             <div class="search-box">
               <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input type="text" id="feedSearchInput" placeholder="Filter requests (Ctrl+K)..." autocomplete="off">
+              <input type="text" id="feedSearchInput" placeholder="Filter requests..." autocomplete="off">
+              <kbd class="shortcut-badge">Ctrl+K</kbd>
             </div>
 
             <!-- Pause / Resume Stream -->
             <button class="action-btn" id="streamPauseBtn" title="Pause / Resume Live Feed (Spacebar)">
               <svg class="icon" id="pauseIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
               <span id="pauseBtnText">Pause</span>
+              <kbd class="shortcut-badge">Space</kbd>
             </button>
 
             <!-- Export Dumps Button -->
@@ -660,7 +677,7 @@ agy</pre>
     <!-- FOOTER STATUS BAR -->
     <footer class="app-footer glass-panel">
       <div class="footer-left">
-        <span class="mono-code">OFSPRO v3.6-PRO</span> · Offensive Security Gemini Proxy · 100% Non-Hallucination Real Intercept
+        <span class="mono-code">OFSPRO v4.0-PRO</span> · Offensive Security Gemini Proxy · 100% Non-Hallucination Real Intercept
       </div>
       <div class="footer-right">
         <span class="footer-item">Mem: <strong id="footMem">-- MB</strong></span>
@@ -688,9 +705,9 @@ agy</pre>
         <div class="drawer-header-actions">
           <!-- Diff Mode Segmented Toggle -->
           <div class="diff-mode-seg" id="diffModeGroup">
-            <button class="diff-seg-btn active" data-mode="split">Split</button>
-            <button class="diff-seg-btn" data-mode="unified">Unified</button>
-            <button class="diff-seg-btn" data-mode="raw">JSON</button>
+            <button class="diff-seg-btn active" data-mode="split">Split <kbd>1</kbd></button>
+            <button class="diff-seg-btn" data-mode="unified">Unified <kbd>2</kbd></button>
+            <button class="diff-seg-btn" data-mode="raw">JSON <kbd>3</kbd></button>
           </div>
           <!-- Close Button -->
           <button class="drawer-close-btn" id="drawerCloseBtn" title="Close (Esc)">
